@@ -1,0 +1,414 @@
+{
+  "title": "MyVenti Data Contracts",
+  "version": "1.0.0",
+  "description": "Data contracts for MyVenti vehicle tracking application",
+  "schemas": {
+    "Vehicle": {
+      "type": "object",
+      "required": ["id", "make", "model", "year", "vehicleType", "licensePlate", "color", "currentMileage", "mileageUnit", "isActive", "createdAt", "updatedAt"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Unique identifier for the vehicle"
+        },
+        "make": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 50,
+          "description": "Vehicle manufacturer (e.g., Toyota, Honda)"
+        },
+        "model": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 50,
+          "description": "Vehicle model (e.g., Camry, Civic)"
+        },
+        "year": {
+          "type": "integer",
+          "minimum": 1900,
+          "description": "Vehicle model year (validated: 1900-current year+1)"
+        },
+        "vehicleType": {
+          "type": "string",
+          "enum": ["motorbike", "car", "truck"],
+          "description": "Type of vehicle"
+        },
+        "licensePlate": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 20,
+          "description": "License plate number"
+        },
+        "color": {
+          "type": "string",
+          "maxLength": 30,
+          "description": "Vehicle color"
+        },
+        "vin": {
+          "type": "string",
+          "minLength": 17,
+          "maxLength": 17,
+          "description": "Vehicle Identification Number"
+        },
+        "currentMileage": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Current odometer reading"
+        },
+        "mileageUnit": {
+          "type": "string",
+          "enum": ["miles", "kilometers"],
+          "description": "Distance unit for mileage"
+        },
+        "imageUrl": {
+          "type": "string",
+          "format": "uri",
+          "description": "Optional vehicle photo URL"
+        },
+        "isActive": {
+          "type": "boolean",
+          "description": "Whether vehicle is in active list"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "When vehicle was added"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Last update timestamp"
+        }
+      }
+    },
+    "ServiceRecord": {
+      "type": "object",
+      "required": ["id", "vehicleId", "serviceDate", "serviceType", "description", "mileageAtService", "mileageUnit", "cost", "currency", "serviceProvider", "createdAt", "updatedAt"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "vehicleId": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Foreign key to Vehicle"
+        },
+        "serviceDate": {
+          "type": "string",
+          "format": "date",
+          "description": "Date of service"
+        },
+        "serviceType": {
+          "type": "string",
+          "enum": ["oil_change", "tire_rotation", "brake_service", "battery_replacement", "transmission_service", "air_filter", "spark_plugs", "inspection", "repair", "maintenance", "other"]
+        },
+        "description": {
+          "type": "string",
+          "minLength": 5,
+          "maxLength": 500,
+          "description": "Detailed description of service performed"
+        },
+        "mileageAtService": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Odometer reading at time of service"
+        },
+        "mileageUnit": {
+          "type": "string",
+          "enum": ["miles", "kilometers"]
+        },
+        "cost": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Total cost of service"
+        },
+        "currency": {
+          "type": "string",
+          "enum": ["USD", "IDR"]
+        },
+        "serviceProvider": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 100,
+          "description": "Shop or mechanic name"
+        },
+        "location": {
+          "type": "string",
+          "maxLength": 200,
+          "description": "Service location"
+        },
+        "notes": {
+          "type": "string",
+          "maxLength": 1000,
+          "description": "Additional notes about the service"
+        },
+        "nextServiceMileage": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Recommended mileage for next service"
+        },
+        "nextServiceDate": {
+          "type": "string",
+          "format": "date",
+          "description": "Recommended date for next service"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "FuelRecord": {
+      "type": "object",
+      "required": ["id", "vehicleId", "fillDate", "odometerReading", "mileageUnit", "fuelAmount", "fuelUnit", "costPerUnit", "totalCost", "currency", "fuelType", "isFullTank", "createdAt", "updatedAt"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "vehicleId": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Foreign key to Vehicle"
+        },
+        "fillDate": {
+          "type": "string",
+          "format": "date",
+          "description": "Date of fuel purchase"
+        },
+        "odometerReading": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Odometer reading at fill-up"
+        },
+        "mileageUnit": {
+          "type": "string",
+          "enum": ["miles", "kilometers"]
+        },
+        "fuelAmount": {
+          "type": "number",
+          "minimum": 0.01,
+          "maximum": 1000,
+          "description": "Amount of fuel purchased"
+        },
+        "fuelUnit": {
+          "type": "string",
+          "enum": ["gallons", "liters"],
+          "description": "Original unit when record was created"
+        },
+        "costPerUnit": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Price per gallon/liter"
+        },
+        "totalCost": {
+          "type": "number",
+          "minimum": 0.01,
+          "description": "Total cost of fill-up"
+        },
+        "currency": {
+          "type": "string",
+          "enum": ["USD", "IDR"],
+          "description": "Original currency when record was created"
+        },
+        "fuelType": {
+          "type": "string",
+          "enum": ["regular", "premium", "diesel", "e85", "electric", "other"]
+        },
+        "fuelStation": {
+          "type": "string",
+          "maxLength": 100,
+          "description": "Gas station name"
+        },
+        "location": {
+          "type": "string",
+          "maxLength": 200,
+          "description": "Location of gas station"
+        },
+        "isFullTank": {
+          "type": "boolean",
+          "description": "Whether tank was filled completely"
+        },
+        "notes": {
+          "type": "string",
+          "maxLength": 500,
+          "description": "Additional notes"
+        },
+        "mpg": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Calculated miles per gallon"
+        },
+        "lph": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Calculated liters per 100km"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "UserProfile": {
+      "type": "object",
+      "required": ["id", "name", "regionalSettings", "notificationPreferences", "appPreferences", "createdAt", "updatedAt"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100,
+          "description": "User's name"
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "description": "User's email (optional)"
+        },
+        "avatar": {
+          "type": "string",
+          "format": "uri",
+          "description": "Profile picture URL"
+        },
+        "regionalSettings": {
+          "$ref": "#/schemas/RegionalSettings"
+        },
+        "notificationPreferences": {
+          "$ref": "#/schemas/NotificationPreferences"
+        },
+        "appPreferences": {
+          "$ref": "#/schemas/AppPreferences"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "RegionalSettings": {
+      "type": "object",
+      "required": ["region", "currency", "fuelUnit", "distanceUnit", "dateFormat", "timeFormat", "numberFormat"],
+      "properties": {
+        "region": {
+          "type": "string",
+          "enum": ["US", "ID"],
+          "description": "User's region"
+        },
+        "currency": {
+          "type": "string",
+          "enum": ["USD", "IDR"]
+        },
+        "fuelUnit": {
+          "type": "string",
+          "enum": ["gallons", "liters"]
+        },
+        "distanceUnit": {
+          "type": "string",
+          "enum": ["miles", "kilometers"]
+        },
+        "dateFormat": {
+          "type": "string",
+          "description": "Date format string (e.g., 'MM/dd/yyyy', 'dd/MM/yyyy')"
+        },
+        "timeFormat": {
+          "type": "string",
+          "enum": ["12h", "24h"]
+        },
+        "numberFormat": {
+          "type": "object",
+          "description": "Intl.NumberFormat options",
+          "properties": {
+            "style": {
+              "type": "string",
+              "enum": ["currency", "decimal"]
+            },
+            "currency": {
+              "type": "string"
+            },
+            "minimumFractionDigits": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 2
+            },
+            "maximumFractionDigits": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 2
+            }
+          }
+        }
+      }
+    },
+    "NotificationPreferences": {
+      "type": "object",
+      "required": ["serviceReminders", "fuelReminders", "generalNotifications"],
+      "properties": {
+        "serviceReminders": {
+          "type": "boolean",
+          "description": "Enable service reminder notifications"
+        },
+        "fuelReminders": {
+          "type": "boolean",
+          "description": "Enable fuel reminder notifications"
+        },
+        "generalNotifications": {
+          "type": "boolean",
+          "description": "Enable general app notifications"
+        },
+        "quietHoursStart": {
+          "type": "string",
+          "pattern": "^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$",
+          "description": "Start of quiet hours (HH:mm format)"
+        },
+        "quietHoursEnd": {
+          "type": "string",
+          "pattern": "^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$",
+          "description": "End of quiet hours (HH:mm format)"
+        }
+      }
+    },
+    "AppPreferences": {
+      "type": "object",
+      "required": ["theme", "autoBackup", "dataRetentionDays", "showTips"],
+      "properties": {
+        "theme": {
+          "type": "string",
+          "enum": ["light", "dark", "system"],
+          "description": "App theme preference"
+        },
+        "autoBackup": {
+          "type": "boolean",
+          "description": "Enable automatic data backup"
+        },
+        "dataRetentionDays": {
+          "type": "integer",
+          "minimum": 30,
+          "maximum": 3650,
+          "description": "Days to retain data"
+        },
+        "showTips": {
+          "type": "boolean",
+          "description": "Show app tips and tutorials"
+        }
+      }
+    }
+  }
+}
