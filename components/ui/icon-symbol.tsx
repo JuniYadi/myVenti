@@ -18,6 +18,11 @@ const MAPPING = {
   'paperplane.fill': 'send',
   'chevron.left.forwardslash.chevron.right': 'code',
   'chevron.right': 'chevron-right',
+  // Vehicle tracking app icons
+  'car.fill': 'directions-car',
+  'fuelpump.fill': 'local-gas-station',
+  'wrench.fill': 'build',
+  'gearshape.fill': 'settings',
 } as IconMapping;
 
 /**
