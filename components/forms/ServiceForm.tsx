@@ -19,7 +19,7 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { ServiceRecord, ServiceFormData, Vehicle } from '@/types/data';
-import { VehicleService } from '@/services/DataService';
+import { VehicleService } from '@/services/index';
 
 interface ServiceFormProps {
   serviceRecord?: ServiceRecord | null;

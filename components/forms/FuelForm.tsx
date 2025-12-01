@@ -18,7 +18,7 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { FuelEntry, FuelFormData, Vehicle, VehicleType } from '@/types/data';
-import { VehicleService } from '@/services/DataService';
+import { VehicleService } from '@/services/index';
 
 interface FuelFormProps {
   fuelEntry?: FuelEntry | null;
