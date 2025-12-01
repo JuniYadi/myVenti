@@ -49,6 +49,14 @@ export function CustomTabNavigator() {
 
   const colors = Colors[colorScheme];
 
+  // Initialize animated indicator based on current active tab
+  React.useEffect(() => {
+    const activeIndex = TABS.findIndex(tab => tab.name === activeTab);
+    if (activeIndex !== -1) {
+      animatedIndicator.value = activeIndex;
+    }
+  }, []);
+
   const handleTabPress = (tabName: string, route: string, index: number) => {
     // Trigger haptic feedback
     if (Platform.OS === 'ios') {
@@ -88,9 +96,7 @@ export function CustomTabNavigator() {
     return {
       transform: [
         {
-          translateX: withTiming(animatedIndicator.value * TAB_WIDTH, {
-            duration: Animation.duration.tabSwitch,
-          }),
+          translateX: animatedIndicator.value * TAB_WIDTH,
         },
       ],
     };
@@ -100,10 +106,7 @@ export function CustomTabNavigator() {
     return {
       transform: [
         {
-          translateY: withSpring(0, {
-            duration: Animation.duration.screenTransition,
-            dampingRatio: 0.8,
-          }),
+          translateY: 0,
         },
       ],
     };

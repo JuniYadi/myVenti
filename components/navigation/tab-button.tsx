@@ -87,9 +87,7 @@ export function TabButton({
 
   const activeIndicatorStyle = useAnimatedStyle(() => {
     return {
-      opacity: withSpring(isActive ? 1 : 0, {
-        duration: Animation.duration.normal,
-      }),
+      opacity: isActive ? 1 : 0,
       backgroundColor: colors.tabActive,
     };
   });
@@ -132,7 +130,6 @@ export function TabButton({
               styles.label,
               {
                 color: isActive ? colors.tabActive : colors.tabInactive,
-                fontSize: Typography.sizes.small,
               },
             ]}
             numberOfLines={1}
@@ -174,7 +171,7 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: Typography.sizes.small,
-    fontWeight: Typography.weights.medium,
+    fontWeight: '500' as const,
     textAlign: 'center',
     marginTop: 2,
   },
