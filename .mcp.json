@@ -1,0 +1,11 @@
+{
+    "mcpServers": {
+        "spec-workflow": {
+            "command": "bunx",
+            "args": [
+                "@pimzino/spec-workflow-mcp@latest",
+                "/home/juniyadi/github/JuniYadi/myVenti"
+            ]
+        }
+    }
+}

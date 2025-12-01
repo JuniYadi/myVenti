@@ -1,0 +1,22 @@
+{
+  "filePath": ".spec-workflow/specs/modern-vehicle-tracking-ui/tasks.md",
+  "currentVersion": 2,
+  "snapshots": [
+    {
+      "version": 1,
+      "filename": "snapshot-001.json",
+      "timestamp": "2025-12-01T12:10:50.082Z",
+      "trigger": "initial",
+      "approvalId": "approval_1764591050080_5t86jlw14",
+      "approvalTitle": "Implementation Tasks for Modern Vehicle Tracking UI"
+    },
+    {
+      "version": 2,
+      "filename": "snapshot-002.json",
+      "timestamp": "2025-12-01T12:12:16.224Z",
+      "trigger": "approved",
+      "approvalId": "approval_1764591050080_5t86jlw14",
+      "approvalTitle": "Implementation Tasks for Modern Vehicle Tracking UI"
+    }
+  ]
+}
