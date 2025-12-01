@@ -2,17 +2,10 @@ import React from 'react';
 import {
   Pressable,
   StyleSheet,
-  Animated,
+  View,
 } from 'react-native';
-import {
-  useAnimatedStyle,
-  useSharedValue,
-  withSpring,
-  withSequence,
-  withTiming,
-} from 'react-native-reanimated';
 import { IconSymbol } from '@/components/ui/icon-symbol';
-import { Spacing, Animation } from '@/constants/theme';
+import { Spacing } from '@/constants/theme';
 
 interface CircularHomeButtonProps {
   isActive: boolean;
@@ -21,68 +14,22 @@ interface CircularHomeButtonProps {
 }
 
 export function CircularHomeButton({ isActive, colors, onPress }: CircularHomeButtonProps) {
-  const scaleValue = useSharedValue(1);
-  const rotationValue = useSharedValue(0);
-  const backgroundColorValue = useSharedValue(colors.tabInactive);
-
-  const handlePressIn = () => {
-    scaleValue.value = withSequence(
-      withTiming(0.9, { duration: Animation.duration.buttonPress }),
-      withSpring(1.1, { dampingRatio: 0.8 })
-    );
-
-    if (!isActive) {
-      backgroundColorValue.value = withTiming(colors.tabActive, {
-        duration: Animation.duration.buttonPress,
-      });
+  const getButtonStyle = () => [
+    styles.button,
+    {
+      backgroundColor: isActive ? colors.tabActive : colors.tabInactive,
+      borderColor: colors.border,
+      borderWidth: 2,
     }
-  };
+  ];
 
-  const handlePressOut = () => {
-    scaleValue.value = withSpring(1, {
-      duration: Animation.duration.buttonPress,
-      dampingRatio: 0.5,
-    });
-
-    if (!isActive) {
-      backgroundColorValue.value = withTiming(colors.tabInactive, {
-        duration: Animation.duration.buttonPress,
-      });
-    }
-
-    rotationValue.value = withSpring(rotationValue.value + 360, {
-      duration: Animation.duration.quick,
-      dampingRatio: 0.8,
-    });
-  };
-
-  React.useEffect(() => {
-    backgroundColorValue.value = isActive ? colors.tabActive : colors.tabInactive;
-  }, [isActive]);
-
-  const animatedStyle = useAnimatedStyle(() => {
-    return {
-      transform: [
-        { scale: scaleValue.value },
-        { rotate: `${rotationValue.value}deg` },
-      ],
-      backgroundColor: backgroundColorValue.value,
-    };
-  });
-
-  const iconAnimatedStyle = useAnimatedStyle(() => {
-    return {
-      transform: [
-        { scale: scaleValue.value },
-      ],
-    };
-  });
+  const getIconStyle = () => [
+    styles.iconContainer
+  ];
 
   return (
     <Pressable
       onPress={onPress}
-      onPressIn={handlePressIn}
-      onPressOut={handlePressOut}
       style={({ pressed }) => [
         styles.container,
         {
@@ -96,27 +43,18 @@ export function CircularHomeButton({ isActive, colors, onPress }: CircularHomeBu
       accessibilityRole="button"
       accessibilityState={{ selected: isActive }}
     >
-      <Animated.View
-        style={[
-          styles.button,
-          animatedStyle,
-          {
-            borderColor: colors.border,
-            borderWidth: 2,
-          },
-        ]}
-      >
-        <Animated.View style={[styles.iconContainer, iconAnimatedStyle]}>
+      <View style={getButtonStyle()}>
+        <View style={getIconStyle()}>
           <IconSymbol
             name="house.fill"
             size={Spacing.navigation.iconSize + 4}
             color={isActive ? colors.background : colors.tabInactive}
           />
-        </Animated.View>
+        </View>
 
         {/* Active indicator ring */}
         {isActive && (
-          <Animated.View
+          <View
             style={[
               styles.activeRing,
               {
@@ -125,7 +63,7 @@ export function CircularHomeButton({ isActive, colors, onPress }: CircularHomeBu
             ]}
           />
         )}
-      </Animated.View>
+      </View>
     </Pressable>
   );
 }
