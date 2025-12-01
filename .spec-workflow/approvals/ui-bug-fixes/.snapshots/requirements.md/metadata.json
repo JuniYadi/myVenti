@@ -1,0 +1,30 @@
+{
+  "filePath": ".spec-workflow/specs/ui-bug-fixes/requirements.md",
+  "currentVersion": 3,
+  "snapshots": [
+    {
+      "version": 1,
+      "filename": "snapshot-001.json",
+      "timestamp": "2025-12-01T18:57:15.651Z",
+      "trigger": "initial",
+      "approvalId": "approval_1764615435645_7atdugg1b",
+      "approvalTitle": "UI Bug Fixes Requirements"
+    },
+    {
+      "version": 2,
+      "filename": "snapshot-002.json",
+      "timestamp": "2025-12-01T18:59:07.812Z",
+      "trigger": "approved",
+      "approvalId": "approval_1764615435645_7atdugg1b",
+      "approvalTitle": "UI Bug Fixes Requirements"
+    },
+    {
+      "version": 3,
+      "filename": "snapshot-003.json",
+      "timestamp": "2025-12-01T19:33:23.073Z",
+      "trigger": "approved",
+      "approvalId": "approval_1764617579049_471kkzvpy",
+      "approvalTitle": "UI Bug Fixes Requirements Document"
+    }
+  ]
+}
