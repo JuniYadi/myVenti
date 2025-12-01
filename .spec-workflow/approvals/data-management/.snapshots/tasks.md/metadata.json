@@ -1,0 +1,22 @@
+{
+  "filePath": ".spec-workflow/specs/data-management/tasks.md",
+  "currentVersion": 2,
+  "snapshots": [
+    {
+      "version": 1,
+      "filename": "snapshot-001.json",
+      "timestamp": "2025-12-01T16:27:49.965Z",
+      "trigger": "initial",
+      "approvalId": "approval_1764606469960_do3jvxr6w",
+      "approvalTitle": "Data Management Tasks Approval"
+    },
+    {
+      "version": 2,
+      "filename": "snapshot-002.json",
+      "timestamp": "2025-12-01T16:28:25.903Z",
+      "trigger": "approved",
+      "approvalId": "approval_1764606469960_do3jvxr6w",
+      "approvalTitle": "Data Management Tasks Approval"
+    }
+  ]
+}
