@@ -1,53 +1,64 @@
-import React from 'react';
-import { StyleSheet, ScrollView, View, TouchableOpacity } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import {
+  StyleSheet,
+  ScrollView,
+  View,
+  TouchableOpacity,
+  RefreshControl,
+} from 'react-native';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Colors, Spacing, Typography } from '@/constants/theme';
 import { IconSymbol } from '@/components/ui/icon-symbol';
+import { DashboardSummary, RecentActivity } from '@/types/data';
+import { VehicleService, FuelService, ServiceService, DashboardService } from '@/services/index';
+import { useRouter } from 'expo-router';
 
 export default function HomeScreen() {
   const colorScheme = useColorScheme() ?? 'light';
   const colors = Colors[colorScheme];
+  const router = useRouter();
 
-  // Dashboard summary data
-  const dashboardData = {
-    totalVehicles: 2,
-    activeVehicles: 1,
-    monthlyFuelCost: 146.95,
-    upcomingServices: 2,
-    totalMileage: 66530,
+  const [dashboardData, setDashboardData] = useState<DashboardSummary>({
+    totalVehicles: 0,
+    activeVehicles: 0,
+    monthlyFuelCost: 0,
+    upcomingServices: 0,
+    totalMileage: 0,
+  });
+
+  const [recentActivity, setRecentActivity] = useState<RecentActivity[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+
+  useEffect(() => {
+    loadDashboardData();
+  }, []);
+
+  const loadDashboardData = async () => {
+    try {
+      setLoading(true);
+      const [summary, activity] = await Promise.all([
+        DashboardService.getSummary(),
+        DashboardService.getRecentActivity(10),
+      ]);
+
+      setDashboardData(summary);
+      setRecentActivity(activity);
+    } catch (error) {
+      console.error('Error loading dashboard data:', error);
+      // Silently fail for dashboard - don't show alerts on home screen
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
   };
 
-  const recentActivity = [
-    {
-      id: 1,
-      type: 'fuel',
-      title: 'Fuel Fill-up',
-      subtitle: 'Tesla Model 3 - $45.50',
-      time: '2 hours ago',
-      icon: 'fuelpump.fill',
-      color: colors.primary,
-    },
-    {
-      id: 2,
-      type: 'service',
-      title: 'Service Completed',
-      subtitle: 'Honda CR-V - Oil Change',
-      time: '1 day ago',
-      icon: 'wrench.fill',
-      color: colors.success,
-    },
-    {
-      id: 3,
-      type: 'alert',
-      title: 'Service Due',
-      subtitle: 'Tesla Model 3 - Annual Inspection',
-      time: '3 days ago',
-      icon: 'bell.fill',
-      color: colors.warning,
-    },
-  ];
+  const handleRefresh = () => {
+    setRefreshing(true);
+    loadDashboardData();
+  };
 
   const quickActions = [
     {
@@ -76,9 +87,13 @@ export default function HomeScreen() {
       title: 'View Reports',
       icon: 'chart.bar.fill',
       color: colors.secondary,
-      route: '/reports',
+      route: '/explore', // Use explore as reports since it exists
     },
   ];
+
+  const handleQuickAction = (route: string) => {
+    router.push(route as any);
+  };
 
   return (
     <ThemedView style={[styles.container, { backgroundColor: colors.background }]}>
@@ -86,6 +101,9 @@ export default function HomeScreen() {
         style={styles.scrollView}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
+        }
       >
         {/* Header */}
         <View style={styles.header}>
@@ -133,7 +151,7 @@ export default function HomeScreen() {
           >
             <IconSymbol name="dollarsign.circle" size={24} color="white" />
             <ThemedText style={styles.summaryValue}>
-              ${dashboardData.monthlyFuelCost}
+              ${dashboardData.monthlyFuelCost.toFixed(0)}
             </ThemedText>
             <ThemedText style={styles.summaryLabel}>
               Monthly Fuel Cost
@@ -188,6 +206,7 @@ export default function HomeScreen() {
                     shadowColor: colors.shadow,
                   },
                 ]}
+                onPress={() => handleQuickAction(action.route)}
               >
                 <View
                   style={[
@@ -216,51 +235,69 @@ export default function HomeScreen() {
           <ThemedText style={[styles.sectionTitle, { color: colors.text }]}>
             Recent Activity
           </ThemedText>
-          <View style={styles.activityList}>
-            {recentActivity.map((activity) => (
-              <View
-                key={activity.id}
-                style={[
-                  styles.activityCard,
-                  {
-                    backgroundColor: colors.card,
-                    borderColor: colors.border,
-                    shadowColor: colors.shadow,
-                  },
-                ]}
-              >
+
+          {recentActivity.length === 0 ? (
+            <View style={styles.emptyActivityState}>
+              <IconSymbol
+                name="clock.arrow.circlepath"
+                size={48}
+                color={colors.icon}
+                style={styles.emptyActivityIcon}
+              />
+              <ThemedText style={[styles.emptyActivityTitle, { color: colors.text }]}>
+                No Recent Activity
+              </ThemedText>
+              <ThemedText style={[styles.emptyActivitySubtitle, { color: colors.icon }]}>
+                Start tracking your vehicles to see recent activity here
+              </ThemedText>
+            </View>
+          ) : (
+            <View style={styles.activityList}>
+              {recentActivity.map((activity) => (
                 <View
+                  key={activity.id}
                   style={[
-                    styles.activityIcon,
-                    { backgroundColor: activity.color + '20' },
+                    styles.activityCard,
+                    {
+                      backgroundColor: colors.card,
+                      borderColor: colors.border,
+                      shadowColor: colors.shadow,
+                    },
                   ]}
                 >
-                  <IconSymbol
-                    name={activity.icon as any}
-                    size={20}
-                    color={activity.color}
-                  />
-                </View>
-                <View style={styles.activityContent}>
-                  <ThemedText
-                    style={[styles.activityTitle, { color: colors.text }]}
+                  <View
+                    style={[
+                      styles.activityIcon,
+                      { backgroundColor: activity.color + '20' },
+                    ]}
                   >
-                    {activity.title}
-                  </ThemedText>
+                    <IconSymbol
+                      name={activity.icon as any}
+                      size={20}
+                      color={activity.color}
+                    />
+                  </View>
+                  <View style={styles.activityContent}>
+                    <ThemedText
+                      style={[styles.activityTitle, { color: colors.text }]}
+                    >
+                      {activity.title}
+                    </ThemedText>
+                    <ThemedText
+                      style={[styles.activitySubtitle, { color: colors.icon }]}
+                    >
+                      {activity.subtitle}
+                    </ThemedText>
+                  </View>
                   <ThemedText
-                    style={[styles.activitySubtitle, { color: colors.icon }]}
+                    style={[styles.activityTime, { color: colors.icon }]}
                   >
-                    {activity.subtitle}
+                    {activity.time}
                   </ThemedText>
                 </View>
-                <ThemedText
-                  style={[styles.activityTime, { color: colors.icon }]}
-                >
-                  {activity.time}
-                </ThemedText>
-              </View>
-            ))}
-          </View>
+              ))}
+            </View>
+          )}
         </View>
 
         {/* Bottom padding to account for navigation */}
@@ -416,5 +453,26 @@ const styles = StyleSheet.create({
   activityTime: {
     fontSize: Typography.sizes.small,
     fontWeight: Typography.weights.normal,
+  },
+  emptyActivityState: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: Spacing.xl,
+  },
+  emptyActivityIcon: {
+    marginBottom: Spacing.md,
+    opacity: 0.5,
+  },
+  emptyActivityTitle: {
+    fontSize: Typography.sizes.title,
+    fontWeight: Typography.weights.semibold,
+    marginBottom: Spacing.sm,
+    textAlign: 'center',
+  },
+  emptyActivitySubtitle: {
+    fontSize: Typography.sizes.body,
+    textAlign: 'center',
+    lineHeight: 22,
+    maxWidth: 280,
   },
 });
