@@ -166,10 +166,10 @@ export const Spacing = {
   // Navigation spacing
   navigation: {
     height: 80,
-    tabBarHeight: 85,
+    tabBarHeight: 95,
     buttonSize: 44, // Minimum touch target
     iconSize: 24,
-    circularButton: 48, // Central home button - reduced for better proportion
+    circularButton: 64, // Central home button - large focal point (~1.5x other icons)
     borderRadius: 20,
   },
 };
