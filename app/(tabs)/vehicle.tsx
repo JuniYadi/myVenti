@@ -13,7 +13,7 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Colors, Spacing, Typography } from '@/constants/theme';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Vehicle, VehicleType } from '@/types/data';
-import { VehicleService } from '@/services/DataService';
+import { VehicleService } from '@/services/index';
 import { VehicleForm } from '@/components/forms/VehicleForm';
 import { FormModal } from '@/components/modals/FormModal';
 
