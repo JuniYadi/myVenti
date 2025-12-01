@@ -421,10 +421,4 @@ export class DashboardService {
   }
 }
 
-// Export all services for easy importing
-export {
-  VehicleService,
-  FuelService,
-  ServiceService,
-  DashboardService,
-};
+// Export services through the index file to avoid circular dependencies
