@@ -57,11 +57,8 @@ export function CircularHomeButton({ isActive, colors, onPress }: CircularHomeBu
   };
 
   React.useEffect(() => {
-    backgroundColorValue.value = withSpring(
-      isActive ? colors.tabActive : colors.tabInactive,
-      { duration: Animation.duration.normal }
-    );
-  }, [isActive, colors]);
+    backgroundColorValue.value = isActive ? colors.tabActive : colors.tabInactive;
+  }, [isActive]);
 
   const animatedStyle = useAnimatedStyle(() => {
     return {
