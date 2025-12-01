@@ -145,23 +145,23 @@ export const Spacing = {
   },
   // Compact card layouts for better space utilization
   cardCompact: {
-    padding: 12,
-    margin: 6,
-    borderRadius: 10,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.08,
-    minHeight: 75, // Further reduced from 90px for more compact layout
-  },
-  quickActionCompact: {
-    padding: 8,
-    margin: 4,
+    padding: 10,
+    margin: 5,
     borderRadius: 8,
     shadowRadius: 4,
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.06,
-    minWidth: 80, // Minimum width for quick action buttons
-    minHeight: 60, // Compact height for quick actions
+    minHeight: 65, // Ultra-compact layout for better space utilization
+  },
+  quickActionCompact: {
+    padding: 6,
+    margin: 3,
+    borderRadius: 6,
+    shadowRadius: 3,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    minWidth: 72, // More compact quick action buttons
+    minHeight: 52, // Further reduced height for quick actions
   },
   // Navigation spacing
   navigation: {
