@@ -1,16 +1,9 @@
 import React, { useState } from 'react';
 import { View, StyleSheet, Dimensions, Platform } from 'react-native';
 import { useColorScheme } from 'react-native';
-import Animated, {
-  useAnimatedStyle,
-  useSharedValue,
-  withSpring,
-  withTiming,
-  runOnJS,
-} from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 import { useRouter, usePathname } from 'expo-router';
-import { Colors, Spacing, Animation } from '@/constants/theme';
+import { Colors, Spacing } from '@/constants/theme';
 import { CircularHomeButton } from './circular-home-button';
 import { TabButton } from './tab-button';
 
@@ -45,17 +38,7 @@ export function CustomTabNavigator() {
   if (pathname === '/settings') return 'settings';
   return 'home';
 });
-  const animatedIndicator = useSharedValue(0);
-
   const colors = Colors[colorScheme];
-
-  // Initialize animated indicator based on current active tab
-  React.useEffect(() => {
-    const activeIndex = TABS.findIndex(tab => tab.name === activeTab);
-    if (activeIndex !== -1) {
-      animatedIndicator.value = activeIndex;
-    }
-  }, []);
 
   const handleTabPress = (tabName: string, route: string, index: number) => {
     // Trigger haptic feedback
@@ -65,12 +48,6 @@ export function CustomTabNavigator() {
 
     // Update active tab
     setActiveTab(tabName);
-
-    // Animate indicator
-    animatedIndicator.value = withSpring(index, {
-      duration: Animation.duration.tabSwitch,
-      dampingRatio: 0.8,
-    });
 
     // Navigate to route
     if (pathname !== route) {
@@ -92,40 +69,24 @@ export function CustomTabNavigator() {
     }
   };
 
-  const indicatorStyle = useAnimatedStyle(() => {
+  const getIndicatorStyle = () => {
+    const activeIndex = TABS.findIndex(tab => tab.name === activeTab);
     return {
-      transform: [
-        {
-          translateX: animatedIndicator.value * TAB_WIDTH,
-        },
-      ],
+      position: 'absolute' as const,
+      top: 10,
+      height: 4,
+      borderRadius: 2,
+      backgroundColor: colors.tabActive,
+      width: TAB_WIDTH - 20,
+      left: activeIndex >= 0 ? activeIndex * TAB_WIDTH + 10 : 10,
     };
-  });
-
-  const containerStyle = useAnimatedStyle(() => {
-    return {
-      transform: [
-        {
-          translateY: 0,
-        },
-      ],
-    };
-  });
+  };
 
   return (
-    <Animated.View style={[styles.container, containerStyle]}>
+    <View style={[styles.container]}>
       <View style={[styles.navigationContainer, { backgroundColor: colors.navigation }]}>
         {/* Active Tab Indicator */}
-        <Animated.View
-          style={[
-            styles.activeIndicator,
-            {
-              backgroundColor: colors.tabActive,
-              width: TAB_WIDTH - 20,
-            },
-            indicatorStyle,
-          ]}
-        />
+        <View style={getIndicatorStyle()} />
 
         {/* Left Side Tabs */}
         <View style={styles.leftTabs}>
@@ -179,7 +140,7 @@ export function CustomTabNavigator() {
           }
         ]}
       />
-    </Animated.View>
+    </View>
   );
 }
 
