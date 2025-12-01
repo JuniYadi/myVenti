@@ -67,10 +67,25 @@ export function TabButton({
         <View style={getIconStyle()}>
           <IconSymbol
             name={icon as any}
-            size={20}
+            size={18}
             color={isActive ? colors.tabActive : colors.tabInactive}
           />
         </View>
+
+        {/* Text Label */}
+        <ThemedText
+          style={[
+            styles.label,
+            {
+              color: isActive ? colors.tabActive : colors.tabInactive,
+              fontSize: 10,
+              fontWeight: isActive ? '600' : '400',
+            },
+          ]}
+          numberOfLines={1}
+        >
+          {label}
+        </ThemedText>
       </View>
     </Pressable>
   );
@@ -88,13 +103,14 @@ const styles = StyleSheet.create({
   buttonContent: {
     alignItems: 'center',
     justifyContent: 'center',
+    gap: 4,
   },
   iconContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-    width: 44,
-    height: 44,
-    borderRadius: 8,
+    width: 36,
+    height: 36,
+    borderRadius: 6,
   },
   activeIndicator: {
     position: 'absolute',

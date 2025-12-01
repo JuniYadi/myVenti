@@ -141,7 +141,7 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    height: 60,
+    height: 70,
   },
   tabIndicator: {
     position: 'absolute',

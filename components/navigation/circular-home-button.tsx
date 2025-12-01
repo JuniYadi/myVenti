@@ -17,8 +17,8 @@ export function CircularHomeButton({ isActive, colors, onPress }: CircularHomeBu
   const getButtonStyle = () => [
     styles.button,
     {
-      backgroundColor: isActive ? colors.card : 'transparent',
-      borderColor: isActive ? colors.tabActive : colors.border,
+      backgroundColor: isActive ? colors.tabActive : colors.card,
+      borderColor: colors.border,
       borderWidth: 1,
     }
   ];
@@ -43,26 +43,42 @@ export function CircularHomeButton({ isActive, colors, onPress }: CircularHomeBu
       accessibilityRole="button"
       accessibilityState={{ selected: isActive }}
     >
-      <View style={getButtonStyle()}>
-        <View style={getIconStyle()}>
-          <IconSymbol
-            name="house.fill"
-            size={20}
-            color={isActive ? colors.tabActive : colors.tabInactive}
-          />
+      <View style={styles.buttonContent}>
+        <View style={getButtonStyle()}>
+          <View style={getIconStyle()}>
+            <IconSymbol
+              name="house.fill"
+              size={28}
+              color={isActive ? colors.background : colors.tabInactive}
+            />
+          </View>
+
+          {/* Active indicator ring */}
+          {isActive && (
+            <View
+              style={[
+                styles.activeRing,
+                {
+                  borderColor: colors.tabActive,
+                },
+              ]}
+            />
+          )}
         </View>
 
-        {/* Active indicator ring */}
-        {isActive && (
-          <View
-            style={[
-              styles.activeRing,
-              {
-                borderColor: colors.tabActive,
-              },
-            ]}
-          />
-        )}
+        {/* Home Label */}
+        <ThemedText
+          style={[
+            styles.homeLabel,
+            {
+              color: isActive ? colors.tabActive : colors.tabInactive,
+              fontWeight: isActive ? '600' : '400',
+            },
+          ]}
+          numberOfLines={1}
+        >
+          Home
+        </ThemedText>
       </View>
     </Pressable>
   );
@@ -70,15 +86,14 @@ export function CircularHomeButton({ isActive, colors, onPress }: CircularHomeBu
 
 const styles = StyleSheet.create({
   container: {
-    width: Spacing.navigation.circularButton,
-    height: Spacing.navigation.circularButton,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: Spacing.navigation.circularButton / 2,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
-    elevation: 6,
+    flex: 1,
+  },
+  buttonContent: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
   },
   button: {
     width: Spacing.navigation.circularButton,
@@ -88,6 +103,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     position: 'relative',
     overflow: 'hidden',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 6,
   },
   iconContainer: {
     alignItems: 'center',
@@ -108,5 +127,9 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
+  },
+  homeLabel: {
+    fontSize: 10,
+    textAlign: 'center',
   },
 });
