@@ -3,12 +3,14 @@ import {
   Pressable,
   StyleSheet,
   Animated,
+} from 'react-native';
+import {
   useAnimatedStyle,
   useSharedValue,
   withSpring,
   withSequence,
   withTiming,
-} from 'react-native';
+} from 'react-native-reanimated';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Spacing, Animation } from '@/constants/theme';
 
