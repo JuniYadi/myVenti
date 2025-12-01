@@ -44,8 +44,7 @@ export function TabButton({
   const getIndicatorStyle = () => [
     styles.activeIndicator,
     {
-      opacity: isActive ? 1 : 0,
-      backgroundColor: colors.tabActive,
+      opacity: 0, // Hide this indicator since we use the one in CustomTabNavigator
     }
   ];
 
@@ -68,24 +67,9 @@ export function TabButton({
         <View style={getIconStyle()}>
           <IconSymbol
             name={icon as any}
-            size={Spacing.navigation.iconSize}
+            size={20}
             color={isActive ? colors.tabActive : colors.tabInactive}
           />
-        </View>
-
-        {/* Optional label for larger screens */}
-        <View style={getButtonStyle()}>
-          <ThemedText
-            style={[
-              styles.label,
-              {
-                color: isActive ? colors.tabActive : colors.tabInactive,
-              },
-            ]}
-            numberOfLines={1}
-          >
-            {label}
-          </ThemedText>
         </View>
       </View>
     </Pressable>
@@ -104,7 +88,6 @@ const styles = StyleSheet.create({
   buttonContent: {
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 2,
   },
   iconContainer: {
     alignItems: 'center',
