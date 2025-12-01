@@ -23,6 +23,17 @@ const MAPPING = {
   'fuelpump.fill': 'local-gas-station',
   'wrench.fill': 'build',
   'gearshape.fill': 'settings',
+  'speedometer': 'speed',
+  'location': 'location-on',
+  'calendar': 'event',
+  'dollarsign.circle': 'attach-money',
+  'moon.fill': 'nightlight-round',
+  'bell.fill': 'notifications',
+  'location.fill': 'location-on',
+  'icloud.fill': 'cloud',
+  'info.circle.fill': 'info',
+  'questionmark.circle.fill': 'help',
+  'plus': 'add',
 } as IconMapping;
 
 /**
