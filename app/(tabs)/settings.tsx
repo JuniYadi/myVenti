@@ -9,18 +9,41 @@ import {
 } from 'react-native';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useThemeManager } from '@/hooks/use-theme-manager';
 import { Colors, Spacing, Typography } from '@/constants/theme';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 
 export default function SettingsScreen() {
-  const colorScheme = useColorScheme() ?? 'light';
+  const { themeMode, colorScheme, setThemeMode, isLoading } = useThemeManager();
   const colors = Colors[colorScheme];
 
   const [notifications, setNotifications] = useState(true);
   const [autoBackup, setAutoBackup] = useState(false);
-  const [darkMode, setDarkMode] = useState(colorScheme === 'dark');
-  const [locationTracking, setLocationTracking] = useState(true);
+  
+  // Initialize dark mode state based on theme manager
+  const darkMode = themeMode === 'dark' || (themeMode === 'system' && colorScheme === 'dark');
+
+  const handleDarkModeToggle = (value: boolean) => {
+    if (value) {
+      // Enable dark mode
+      if (colorScheme === 'dark') {
+        // System is already dark, use system mode
+        setThemeMode('system');
+      } else {
+        // System is light, force dark mode
+        setThemeMode('dark');
+      }
+    } else {
+      // Disable dark mode
+      if (colorScheme === 'light') {
+        // System is already light, use system mode
+        setThemeMode('system');
+      } else {
+        // System is dark, force light mode
+        setThemeMode('light');
+      }
+    }
+  };
 
   const settingsSections = [
     {
@@ -29,10 +52,13 @@ export default function SettingsScreen() {
         {
           icon: 'moon.fill',
           title: 'Dark Mode',
-          subtitle: 'Use dark theme across the app',
+          subtitle: themeMode === 'system'
+            ? 'Follow system theme'
+            : `Force ${themeMode === 'dark' ? 'dark' : 'light'} mode`,
           type: 'toggle',
           value: darkMode,
-          onToggle: setDarkMode,
+          onToggle: handleDarkModeToggle,
+          disabled: isLoading,
         },
         {
           icon: 'bell.fill',
@@ -41,14 +67,6 @@ export default function SettingsScreen() {
           type: 'toggle',
           value: notifications,
           onToggle: setNotifications,
-        },
-        {
-          icon: 'location.fill',
-          title: 'Location Tracking',
-          subtitle: 'Track vehicle location',
-          type: 'toggle',
-          value: locationTracking,
-          onToggle: setLocationTracking,
         },
       ],
     },
@@ -156,13 +174,14 @@ export default function SettingsScreen() {
           {item.type === 'toggle' && (
             <Switch
               value={item.value}
-              onValueChange={item.onToggle}
+              onValueChange={item.disabled ? undefined : item.onToggle}
               trackColor={{
                 false: colors.border,
                 true: colors.primary + '40',
               }}
               thumbColor={item.value ? colors.primary : colors.icon}
               ios_backgroundColor={colors.border}
+              disabled={item.disabled}
             />
           )}
           {item.type === 'action' && (

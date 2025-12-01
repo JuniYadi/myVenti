@@ -123,7 +123,7 @@ export default function HomeScreen() {
               { backgroundColor: colors.primary },
             ]}
           >
-            <IconSymbol name="car.fill" size={24} color="white" />
+            <IconSymbol name="car.fill" size={20} color="white" />
             <ThemedText style={styles.summaryValue}>
               {dashboardData.totalVehicles}
             </ThemedText>
@@ -149,7 +149,7 @@ export default function HomeScreen() {
               { backgroundColor: colors.warning },
             ]}
           >
-            <IconSymbol name="dollarsign.circle" size={24} color="white" />
+            <IconSymbol name="dollarsign.circle" size={20} color="white" />
             <ThemedText style={styles.summaryValue}>
               ${dashboardData.monthlyFuelCost.toFixed(0)}
             </ThemedText>
@@ -164,7 +164,7 @@ export default function HomeScreen() {
               { backgroundColor: colors.serviceDue },
             ]}
           >
-            <IconSymbol name="wrench.fill" size={24} color="white" />
+            <IconSymbol name="wrench.fill" size={20} color="white" />
             <ThemedText style={styles.summaryValue}>
               {dashboardData.upcomingServices}
             </ThemedText>
@@ -179,7 +179,7 @@ export default function HomeScreen() {
               { backgroundColor: colors.success },
             ]}
           >
-            <IconSymbol name="speedometer" size={24} color="white" />
+            <IconSymbol name="speedometer" size={20} color="white" />
             <ThemedText style={styles.summaryValue}>
               {dashboardData.totalMileage.toLocaleString()}
             </ThemedText>
@@ -364,15 +364,16 @@ const styles = StyleSheet.create({
   },
   summaryValue: {
     color: 'white',
-    fontSize: Typography.sizes.xl,
+    fontSize: Typography.sizes.lg, // Slightly smaller for compact layout
     fontWeight: Typography.weights.bold,
-    marginVertical: Spacing.xs / 3,
+    marginVertical: Spacing.xs / 4, // Reduced spacing for compact layout
   },
   summaryLabel: {
     color: 'white',
     fontSize: Typography.sizes.caption,
     fontWeight: Typography.weights.medium,
     textAlign: 'center',
+    marginTop: 2, // Small margin to separate from value
   },
   activeIndicator: {
     flexDirection: 'row',
@@ -395,7 +396,7 @@ const styles = StyleSheet.create({
     gap: Spacing.sm,
   },
   quickActionCard: {
-    width: 80,
+    width: Spacing.quickActionCompact.minWidth, // Use theme constant for consistency
     padding: Spacing.quickActionCompact.padding,
     borderRadius: Spacing.quickActionCompact.borderRadius,
     borderWidth: 1,
@@ -407,12 +408,12 @@ const styles = StyleSheet.create({
     minHeight: Spacing.quickActionCompact.minHeight,
   },
   quickActionIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 32, // Slightly smaller for compact layout
+    height: 32,
+    borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: Spacing.xs,
+    marginBottom: Spacing.xs / 2, // Reduced spacing for compact layout
   },
   quickActionTitle: {
     fontSize: Typography.sizes.caption,
