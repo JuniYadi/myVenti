@@ -34,6 +34,7 @@ const MAPPING = {
   'info.circle.fill': 'info',
   'questionmark.circle.fill': 'help',
   'plus': 'add',
+  'chart.bar.fill': 'bar-chart',
 } as IconMapping;
 
 /**
