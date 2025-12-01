@@ -169,7 +169,7 @@ export const Spacing = {
     tabBarHeight: 85,
     buttonSize: 44, // Minimum touch target
     iconSize: 24,
-    circularButton: 56, // Central home button
+    circularButton: 48, // Central home button - reduced for better proportion
     borderRadius: 20,
   },
 };

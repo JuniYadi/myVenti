@@ -17,9 +17,9 @@ export function CircularHomeButton({ isActive, colors, onPress }: CircularHomeBu
   const getButtonStyle = () => [
     styles.button,
     {
-      backgroundColor: isActive ? colors.tabActive : colors.tabInactive,
-      borderColor: colors.border,
-      borderWidth: 2,
+      backgroundColor: isActive ? colors.card : 'transparent',
+      borderColor: isActive ? colors.tabActive : colors.border,
+      borderWidth: 1,
     }
   ];
 
@@ -47,8 +47,8 @@ export function CircularHomeButton({ isActive, colors, onPress }: CircularHomeBu
         <View style={getIconStyle()}>
           <IconSymbol
             name="house.fill"
-            size={Spacing.navigation.iconSize + 4}
-            color={isActive ? colors.background : colors.tabInactive}
+            size={20}
+            color={isActive ? colors.tabActive : colors.tabInactive}
           />
         </View>
 
@@ -81,9 +81,9 @@ const styles = StyleSheet.create({
     elevation: 6,
   },
   button: {
-    width: Spacing.navigation.circularButton - 8,
-    height: Spacing.navigation.circularButton - 8,
-    borderRadius: (Spacing.navigation.circularButton - 8) / 2,
+    width: Spacing.navigation.circularButton,
+    height: Spacing.navigation.circularButton,
+    borderRadius: Spacing.navigation.circularButton / 2,
     alignItems: 'center',
     justifyContent: 'center',
     position: 'relative',
@@ -95,13 +95,13 @@ const styles = StyleSheet.create({
   },
   activeRing: {
     position: 'absolute',
-    top: -2,
-    left: -2,
-    right: -2,
-    bottom: -2,
-    borderRadius: (Spacing.navigation.circularButton - 4) / 2,
-    borderWidth: 2,
-    opacity: 0.6,
+    top: -1,
+    left: -1,
+    right: -1,
+    bottom: -1,
+    borderRadius: (Spacing.navigation.circularButton + 2) / 2,
+    borderWidth: 1,
+    opacity: 0.8,
   },
   pressed: {
     shadowOffset: { width: 0, height: 2 },

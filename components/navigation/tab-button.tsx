@@ -92,7 +92,8 @@ const styles = StyleSheet.create({
   iconContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-    padding: Spacing.xs,
+    width: 44,
+    height: 44,
     borderRadius: 8,
   },
   activeIndicator: {

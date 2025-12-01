@@ -151,6 +151,8 @@ const styles = StyleSheet.create({
     position: 'relative',
     flex: 1,
     alignItems: 'center',
+    justifyContent: 'center',
+    height: 60,
   },
   tabIndicator: {
     position: 'absolute',
@@ -179,23 +181,21 @@ const styles = StyleSheet.create({
   leftTabs: {
     flex: 1,
     flexDirection: 'row',
-    justifyContent: 'flex-start',
+    justifyContent: 'space-around',
     alignItems: 'center',
-    gap: Spacing.sm,
   },
   rightTabs: {
     flex: 1,
     flexDirection: 'row',
-    justifyContent: 'flex-end',
+    justifyContent: 'space-around',
     alignItems: 'center',
-    gap: Spacing.sm,
   },
   centerButton: {
     width: CIRCULAR_BUTTON_SIZE,
     height: CIRCULAR_BUTTON_SIZE,
     alignItems: 'center',
     justifyContent: 'center',
-    marginHorizontal: Spacing.md,
+    marginHorizontal: Spacing.sm,
   },
   shadowLine: {
     height: 1,
