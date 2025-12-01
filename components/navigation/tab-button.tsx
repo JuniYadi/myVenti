@@ -4,12 +4,14 @@ import {
   StyleSheet,
   View,
   Animated,
-  useAnimatedStyle,
-  useSharedValue,
-  withSpring,
-  withTiming,
   LayoutChangeEvent,
 } from 'react-native';
+import {
+  useSharedValue,
+  useAnimatedStyle,
+  withSpring,
+  withTiming,
+} from 'react-native-reanimated';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { ThemedText } from '@/components/themed-text';
 import { Spacing, Animation, Typography } from '@/constants/theme';
