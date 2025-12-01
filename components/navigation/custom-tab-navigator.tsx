@@ -129,7 +129,10 @@ export function CustomTabNavigator() {
           {TABS.slice(0, 2).map((tab, index) => (
             <TabButton
               key={tab.name}
-              {...tab}
+              name={tab.name}
+              label={tab.label}
+              icon={tab.icon}
+              route={tab.route}
               isActive={activeTab === tab.name}
               colors={colors}
               onPress={() => handleTabPress(tab.name, tab.route, index)}
@@ -151,7 +154,10 @@ export function CustomTabNavigator() {
           {TABS.slice(2).map((tab, index) => (
             <TabButton
               key={tab.name}
-              {...tab}
+              name={tab.name}
+              label={tab.label}
+              icon={tab.icon}
+              route={tab.route}
               isActive={activeTab === tab.name}
               colors={colors}
               onPress={() => handleTabPress(tab.name, tab.route, index + 2)}
