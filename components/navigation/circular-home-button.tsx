@@ -5,6 +5,7 @@ import {
   View,
 } from 'react-native';
 import { IconSymbol } from '@/components/ui/icon-symbol';
+import { ThemedText } from '@/components/themed-text';
 import { Spacing } from '@/constants/theme';
 
 interface CircularHomeButtonProps {
