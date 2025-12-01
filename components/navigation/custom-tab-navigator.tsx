@@ -72,17 +72,6 @@ export function CustomTabNavigator() {
   
   return (
     <View style={[styles.container]}>
-      {/* Shadow/Border */}
-      <View
-        style={[
-         styles.shadowLine,
-          {
-            backgroundColor: colors.border,
-            shadowColor: colors.shadow,
-          }
-        ]}
-      />
-
       <View style={[styles.navigationContainer, { backgroundColor: colors.navigation }]}>
         {/* Left Side Tabs */}
         <View style={styles.leftTabs}>
@@ -156,9 +145,9 @@ const styles = StyleSheet.create({
   },
   tabIndicator: {
     position: 'absolute',
-    top: 0,
-    height: 3,
-    width: 30,
+    top: -2,
+    height: 4,
+    width: 40,
     borderRadius: 2,
   },
   navigationContainer: {
@@ -170,6 +159,10 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: Spacing.navigation.borderRadius,
     borderTopRightRadius: Spacing.navigation.borderRadius,
     position: 'relative',
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 4,
   },
   activeIndicator: {
     position: 'absolute',
@@ -197,11 +190,4 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginHorizontal: Spacing.sm,
   },
-  shadowLine: {
-    height: 1,
-    shadowOffset: { width: 0, height: -2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 4,
-  },
-});
+  });
