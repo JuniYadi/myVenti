@@ -1,66 +1,153 @@
-import React from 'react';
-import { StyleSheet, ScrollView, View } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import {
+  StyleSheet,
+  ScrollView,
+  View,
+  TouchableOpacity,
+  Alert,
+  RefreshControl,
+} from 'react-native';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Colors, Spacing, Typography } from '@/constants/theme';
 import { IconSymbol } from '@/components/ui/icon-symbol';
+import { ServiceRecord, Vehicle } from '@/types/data';
+import { ServiceService, VehicleService } from '@/services/index';
+import { ServiceForm } from '@/components/forms/ServiceForm';
+import { FormModal } from '@/components/modals/FormModal';
 
 export default function ServiceScreen() {
   const colorScheme = useColorScheme() ?? 'light';
   const colors = Colors[colorScheme];
+  const [serviceRecords, setServiceRecords] = useState<ServiceRecord[]>([]);
+  const [vehicles, setVehicles] = useState<Vehicle[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const [modalVisible, setModalVisible] = useState(false);
+  const [editingRecord, setEditingRecord] = useState<ServiceRecord | null>(null);
+  const [yearlyTotal, setYearlyTotal] = useState(0);
 
-  // Placeholder service records
-  const serviceRecords = [
-    {
-      id: 1,
-      date: '2024-10-15',
-      vehicle: '2022 Tesla Model 3',
-      type: 'Annual Inspection',
-      cost: 125.00,
-      mileage: '24,200',
-      provider: 'Tesla Service Center',
-      status: 'completed',
-      nextDue: '2025-10-15',
-    },
-    {
-      id: 2,
-      date: '2024-09-20',
-      vehicle: '2021 Honda CR-V',
-      type: 'Oil Change',
-      cost: 45.99,
-      mileage: '42,000',
-      provider: 'Quick Lube Express',
-      status: 'completed',
-      nextDue: '2025-01-20',
-    },
-    {
-      id: 3,
-      date: '2024-08-10',
-      vehicle: '2021 Honda CR-V',
-      type: 'Tire Rotation',
-      cost: 25.00,
-      mileage: '41,000',
-      provider: 'Honda Dealership',
-      status: 'completed',
-      nextDue: '2024-12-10',
-    },
-    {
-      id: 4,
-      date: 'Upcoming',
-      vehicle: '2021 Honda CR-V',
-      type: 'Tire Rotation',
-      cost: 'Est. $25-35',
-      mileage: 'Expected: 43,500',
-      provider: 'Pending',
-      status: 'upcoming',
-      nextDue: '2024-12-10',
-    },
-  ];
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  const loadData = async () => {
+    try {
+      setLoading(true);
+      const [records, vehicleList] = await Promise.all([
+        ServiceService.getAll(),
+        VehicleService.getAll(),
+      ]);
+
+      // Sort records by date (most recent first)
+      const sortedRecords = records.sort((a, b) =>
+        new Date(b.date).getTime() - new Date(a.date).getTime()
+      );
+
+      setServiceRecords(sortedRecords);
+      setVehicles(vehicleList);
+
+      // Calculate yearly total cost
+      const currentYear = new Date().getFullYear();
+      const yearlyCost = records
+        .filter(record => new Date(record.date).getFullYear() === currentYear)
+        .reduce((total, record) => total + record.cost, 0);
+      setYearlyTotal(yearlyCost);
+
+    } catch (error) {
+      console.error('Error loading service data:', error);
+      Alert.alert('Error', 'Failed to load service records');
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
+
+  const handleRefresh = () => {
+    setRefreshing(true);
+    loadData();
+  };
+
+  const handleAddRecord = () => {
+    setEditingRecord(null);
+    setModalVisible(true);
+  };
+
+  const handleEditRecord = (record: ServiceRecord) => {
+    setEditingRecord(record);
+    setModalVisible(true);
+  };
+
+  const handleDeleteRecord = (record: ServiceRecord) => {
+    const vehicle = vehicles.find(v => v.id === record.vehicleId);
+    const vehicleName = vehicle ? vehicle.name : 'Unknown Vehicle';
+
+    Alert.alert(
+      'Delete Service Record',
+      `Are you sure you want to delete the "${record.type}" record for ${vehicleName} on ${record.date}?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await ServiceService.delete(record.id);
+              Alert.alert('Success', 'Service record deleted successfully');
+              loadData();
+            } catch (error) {
+              console.error('Error deleting service record:', error);
+              Alert.alert('Error', 'Failed to delete service record');
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const handleServiceSubmit = async (formData: any) => {
+    try {
+      if (editingRecord) {
+        // Note: Update functionality would need to be implemented in ServiceService
+        Alert.alert('Info', 'Edit functionality coming soon');
+      } else {
+        await ServiceService.create(formData);
+        Alert.alert('Success', 'Service record added successfully');
+      }
+      setModalVisible(false);
+      loadData();
+    } catch (error) {
+      console.error('Error saving service record:', error);
+      throw error; // Let the form handle the error
+    }
+  };
+
+  const getVehicleName = (vehicleId: string) => {
+    const vehicle = vehicles.find(v => v.id === vehicleId);
+    return vehicle ? vehicle.name : 'Unknown Vehicle';
+  };
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString();
+  };
+
+  const isUpcoming = (dateString: string) => {
+    const serviceDate = new Date(dateString);
+    const today = new Date();
+    return serviceDate > today;
+  };
 
   return (
     <ThemedView style={[styles.container, { backgroundColor: colors.background }]}>
-      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        style={styles.scrollView}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
+        }
+      >
         <View style={styles.header}>
           <ThemedText style={[styles.title, { color: colors.text }]}>
             Service & Maintenance
@@ -79,7 +166,9 @@ export default function ServiceScreen() {
             ]}
           >
             <IconSymbol name="wrench.fill" size={24} color="white" />
-            <ThemedText style={styles.summaryValue}>2</ThemedText>
+            <ThemedText style={styles.summaryValue}>
+              {serviceRecords.filter(record => isUpcoming(record.date)).length}
+            </ThemedText>
             <ThemedText style={styles.summaryLabel}>Upcoming</ThemedText>
           </View>
           <View
@@ -89,108 +178,145 @@ export default function ServiceScreen() {
             ]}
           >
             <IconSymbol name="dollarsign.circle" size={24} color="white" />
-            <ThemedText style={styles.summaryValue}>$195.99</ThemedText>
+            <ThemedText style={styles.summaryValue}>
+              ${yearlyTotal.toFixed(0)}
+            </ThemedText>
             <ThemedText style={styles.summaryLabel}>This Year</ThemedText>
           </View>
         </View>
 
-        <View style={styles.serviceList}>
-          <ThemedText style={[styles.sectionTitle, { color: colors.text }]}>
-            Service Records
-          </ThemedText>
+        {serviceRecords.length === 0 && !loading ? (
+          <View style={styles.emptyState}>
+            <IconSymbol
+              name="wrench.fill"
+              size={64}
+              color={colors.icon}
+              style={styles.emptyIcon}
+            />
+            <ThemedText style={[styles.emptyTitle, { color: colors.text }]}>
+              No Service Records Yet
+            </ThemedText>
+            <ThemedText style={[styles.emptySubtitle, { color: colors.icon }]}>
+              Add your first service record to start tracking maintenance history
+            </ThemedText>
+          </View>
+        ) : (
+          <View style={styles.serviceList}>
+            <ThemedText style={[styles.sectionTitle, { color: colors.text }]}>
+              Service Records
+            </ThemedText>
 
-          {serviceRecords.map((record) => (
-            <View
-              key={record.id}
-              style={[
-                styles.serviceCard,
-                {
-                  backgroundColor: colors.card,
-                  borderColor:
-                    record.status === 'upcoming'
-                      ? colors.serviceDue
-                      : colors.border,
-                  shadowColor: colors.shadow,
-                  borderWidth: record.status === 'upcoming' ? 2 : 1,
-                },
-              ]}
-            >
-              <View style={styles.serviceHeader}>
-                <View style={styles.serviceInfo}>
-                  <View style={styles.serviceTypeRow}>
-                    <ThemedText
-                      style={[
-                        styles.serviceType,
-                        { color: colors.text }
-                      ]}
-                    >
-                      {record.type}
-                    </ThemedText>
-                    <View
-                      style={[
-                        styles.statusBadge,
-                        {
-                          backgroundColor:
-                            record.status === 'completed'
-                              ? colors.success
-                              : colors.serviceDue,
-                        },
-                      ]}
-                    >
-                      <ThemedText style={styles.statusText}>
-                        {record.status === 'completed' ? 'Completed' : 'Upcoming'}
+            {serviceRecords.map((record) => {
+              const vehicleName = getVehicleName(record.vehicleId);
+              const isRecordUpcoming = isUpcoming(record.date);
+
+              return (
+                <TouchableOpacity
+                  key={record.id}
+                  style={[
+                    styles.serviceCard,
+                    {
+                      backgroundColor: colors.card,
+                      borderColor: isRecordUpcoming ? colors.serviceDue : colors.border,
+                      shadowColor: colors.shadow,
+                      borderWidth: isRecordUpcoming ? 2 : 1,
+                    },
+                  ]}
+                  onLongPress={() => handleDeleteRecord(record)}
+                  delayLongPress={500}
+                >
+                  <View style={styles.serviceHeader}>
+                    <View style={styles.serviceInfo}>
+                      <View style={styles.serviceTypeRow}>
+                        <ThemedText style={[styles.serviceType, { color: colors.text }]}>
+                          {record.type}
+                        </ThemedText>
+                        <View
+                          style={[
+                            styles.statusBadge,
+                            {
+                              backgroundColor: isRecordUpcoming ? colors.warning : colors.success,
+                            },
+                          ]}
+                        >
+                          <ThemedText style={styles.statusText}>
+                            {isRecordUpcoming ? 'Scheduled' : 'Completed'}
+                          </ThemedText>
+                        </View>
+                      </View>
+                      <ThemedText style={[styles.serviceVehicle, { color: colors.icon }]}>
+                        {vehicleName}
+                      </ThemedText>
+                      <ThemedText style={[styles.serviceDate, { color: colors.icon }]}>
+                        {formatDate(record.date)}
+                      </ThemedText>
+                    </View>
+                    <View style={styles.serviceCost}>
+                      <ThemedText style={[styles.cost, { color: colors.primary }]}>
+                        ${record.cost.toFixed(2)}
                       </ThemedText>
                     </View>
                   </View>
-                  <ThemedText style={[styles.serviceVehicle, { color: colors.icon }]}>
-                    {record.vehicle}
-                  </ThemedText>
-                  <ThemedText style={[styles.serviceDate, { color: colors.icon }]}>
-                    {record.date}
-                  </ThemedText>
-                </View>
-                <View style={styles.serviceCost}>
-                  <ThemedText style={[styles.cost, { color: colors.primary }]}>
-                    {record.cost}
-                  </ThemedText>
-                </View>
-              </View>
 
-              <View style={styles.serviceDetails}>
-                <View style={styles.detailItem}>
-                  <IconSymbol name="location" size={14} color={colors.icon} />
-                  <ThemedText style={[styles.detailValue, { color: colors.text }]}>
-                    {record.provider}
-                  </ThemedText>
-                </View>
-                <View style={styles.detailItem}>
-                  <IconSymbol name="speedometer" size={14} color={colors.icon} />
-                  <ThemedText style={[styles.detailValue, { color: colors.text }]}>
-                    {record.mileage}
-                  </ThemedText>
-                </View>
-                <View style={styles.detailItem}>
-                  <IconSymbol name="calendar" size={14} color={colors.serviceDue} />
-                  <ThemedText
-                    style={[
-                      styles.detailValue,
-                      { color: colors.serviceDue }
-                    ]}
-                  >
-                    Due: {record.nextDue}
-                  </ThemedText>
-                </View>
-              </View>
-            </View>
-          ))}
-        </View>
+                  <View style={styles.serviceDetails}>
+                    <View style={styles.detailItem}>
+                      <IconSymbol name="speedometer" size={14} color={colors.icon} />
+                      <ThemedText style={[styles.detailValue, { color: colors.text }]}>
+                        {record.mileage.toLocaleString()} mi
+                      </ThemedText>
+                    </View>
+                    {record.description && (
+                      <View style={styles.detailItem}>
+                        <IconSymbol name="doc.text" size={14} color={colors.icon} />
+                        <ThemedText
+                          style={[styles.detailValue, { color: colors.text }]}
+                          numberOfLines={1}
+                        >
+                          {record.description}
+                        </ThemedText>
+                      </View>
+                    )}
+                    {record.notes && (
+                      <View style={styles.detailItem}>
+                        <IconSymbol name="note.text" size={14} color={colors.icon} />
+                        <ThemedText
+                          style={[styles.detailValue, { color: colors.text }]}
+                          numberOfLines={1}
+                        >
+                          Notes
+                        </ThemedText>
+                      </View>
+                    )}
+                  </View>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        )}
 
-        {/* Add Service Record Button Placeholder */}
-        <View style={[styles.addButton, { backgroundColor: colors.primary }]}>
+        {/* Add Service Record Button */}
+        <TouchableOpacity
+          style={[styles.addButton, { backgroundColor: colors.primary }]}
+          onPress={handleAddRecord}
+        >
           <IconSymbol name="plus" size={24} color="white" />
           <ThemedText style={styles.addButtonText}>Add Service Record</ThemedText>
-        </View>
+        </TouchableOpacity>
       </ScrollView>
+
+      {/* Service Form Modal */}
+      <FormModal
+        visible={modalVisible}
+        onClose={() => setModalVisible(false)}
+        title={editingRecord ? 'Edit Service Record' : 'Add Service Record'}
+      >
+        <ServiceForm
+          serviceRecord={editingRecord}
+          onSubmit={handleServiceSubmit}
+          onCancel={() => setModalVisible(false)}
+          submitButtonText={editingRecord ? 'Update Record' : 'Add Record'}
+        />
+      </FormModal>
     </ThemedView>
   );
 }
@@ -345,5 +471,28 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: Typography.sizes.body,
     fontWeight: Typography.weights.semibold,
+  },
+  emptyState: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: Spacing.xxl,
+    marginTop: Spacing.xxl,
+  },
+  emptyIcon: {
+    marginBottom: Spacing.md,
+    opacity: 0.5,
+  },
+  emptyTitle: {
+    fontSize: Typography.sizes.title,
+    fontWeight: Typography.weights.semibold,
+    marginBottom: Spacing.sm,
+    textAlign: 'center',
+  },
+  emptySubtitle: {
+    fontSize: Typography.sizes.body,
+    textAlign: 'center',
+    lineHeight: 22,
+    maxWidth: 280,
   },
 });
