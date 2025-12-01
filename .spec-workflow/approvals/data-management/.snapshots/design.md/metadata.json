@@ -1,0 +1,22 @@
+{
+  "filePath": ".spec-workflow/specs/data-management/design.md",
+  "currentVersion": 2,
+  "snapshots": [
+    {
+      "version": 1,
+      "filename": "snapshot-001.json",
+      "timestamp": "2025-12-01T16:26:03.100Z",
+      "trigger": "initial",
+      "approvalId": "approval_1764606363094_qu3sn8rn4",
+      "approvalTitle": "Data Management Design Approval"
+    },
+    {
+      "version": 2,
+      "filename": "snapshot-002.json",
+      "timestamp": "2025-12-01T16:26:53.863Z",
+      "trigger": "approved",
+      "approvalId": "approval_1764606363094_qu3sn8rn4",
+      "approvalTitle": "Data Management Design Approval"
+    }
+  ]
+}
