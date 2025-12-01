@@ -194,7 +194,11 @@ export default function HomeScreen() {
           <ThemedText style={[styles.sectionTitle, { color: colors.text }]}>
             Quick Actions
           </ThemedText>
-          <View style={styles.quickActionsGrid}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.quickActionsGrid}
+          >
             {quickActions.map((action) => (
               <TouchableOpacity
                 key={action.id}
@@ -216,7 +220,7 @@ export default function HomeScreen() {
                 >
                   <IconSymbol
                     name={action.icon as any}
-                    size={24}
+                    size={20}
                     color={action.color}
                   />
                 </View>
@@ -227,7 +231,7 @@ export default function HomeScreen() {
                 </ThemedText>
               </TouchableOpacity>
             ))}
-          </View>
+          </ScrollView>
         </View>
 
         {/* Recent Activity */}
@@ -348,21 +352,21 @@ const styles = StyleSheet.create({
   },
   summaryCard: {
     width: '48%',
-    padding: Spacing.md,
-    borderRadius: Spacing.card.borderRadius,
-    minHeight: 120,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    padding: Spacing.cardCompact.padding,
+    borderRadius: Spacing.cardCompact.borderRadius,
+    minHeight: Spacing.cardCompact.minHeight,
+    shadowOffset: Spacing.cardCompact.shadowOffset,
+    shadowOpacity: Spacing.cardCompact.shadowOpacity,
+    shadowRadius: Spacing.cardCompact.shadowRadius,
     elevation: 3,
     alignItems: 'center',
     justifyContent: 'center',
   },
   summaryValue: {
     color: 'white',
-    fontSize: Typography.sizes.xxxl,
+    fontSize: Typography.sizes.xl,
     fontWeight: Typography.weights.bold,
-    marginVertical: Spacing.xs,
+    marginVertical: Spacing.xs / 3,
   },
   summaryLabel: {
     color: 'white',
@@ -388,28 +392,27 @@ const styles = StyleSheet.create({
   },
   quickActionsGrid: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
     gap: Spacing.sm,
   },
   quickActionCard: {
-    width: '48%',
-    padding: Spacing.md,
-    borderRadius: Spacing.card.borderRadius,
+    width: 80,
+    padding: Spacing.quickActionCompact.padding,
+    borderRadius: Spacing.quickActionCompact.borderRadius,
     borderWidth: 1,
-    shadowOffset: Spacing.card.shadowOffset,
-    shadowOpacity: Spacing.card.shadowOpacity,
-    shadowRadius: Spacing.card.shadowRadius,
+    shadowOffset: Spacing.quickActionCompact.shadowOffset,
+    shadowOpacity: Spacing.quickActionCompact.shadowOpacity,
+    shadowRadius: Spacing.quickActionCompact.shadowRadius,
     elevation: 2,
     alignItems: 'center',
-    minHeight: 90,
+    minHeight: Spacing.quickActionCompact.minHeight,
   },
   quickActionIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: Spacing.sm,
+    marginBottom: Spacing.xs,
   },
   quickActionTitle: {
     fontSize: Typography.sizes.caption,

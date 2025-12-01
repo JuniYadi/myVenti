@@ -69,38 +69,39 @@ export function CustomTabNavigator() {
     }
   };
 
-  const getIndicatorStyle = () => {
-    const activeIndex = TABS.findIndex(tab => tab.name === activeTab);
-    return {
-      position: 'absolute' as const,
-      top: 10,
-      height: 4,
-      borderRadius: 2,
-      backgroundColor: colors.tabActive,
-      width: TAB_WIDTH - 20,
-      left: activeIndex >= 0 ? activeIndex * TAB_WIDTH + 10 : 10,
-    };
-  };
-
+  
   return (
     <View style={[styles.container]}>
-      <View style={[styles.navigationContainer, { backgroundColor: colors.navigation }]}>
-        {/* Active Tab Indicator */}
-        <View style={getIndicatorStyle()} />
+      {/* Shadow/Border */}
+      <View
+        style={[
+         styles.shadowLine,
+          {
+            backgroundColor: colors.border,
+            shadowColor: colors.shadow,
+          }
+        ]}
+      />
 
+      <View style={[styles.navigationContainer, { backgroundColor: colors.navigation }]}>
         {/* Left Side Tabs */}
         <View style={styles.leftTabs}>
           {TABS.slice(0, 2).map((tab, index) => (
-            <TabButton
-              key={tab.name}
-              name={tab.name}
-              label={tab.label}
-              icon={tab.icon}
-              route={tab.route}
-              isActive={activeTab === tab.name}
-              colors={colors}
-              onPress={() => handleTabPress(tab.name, tab.route, index)}
-            />
+            <View key={tab.name} style={styles.tabWrapper}>
+              <TabButton
+                name={tab.name}
+                label={tab.label}
+                icon={tab.icon}
+                route={tab.route}
+                isActive={activeTab === tab.name}
+                colors={colors}
+                onPress={() => handleTabPress(tab.name, tab.route, index)}
+              />
+              {/* Individual Tab Indicator */}
+              {activeTab === tab.name && (
+                <View style={[styles.tabIndicator, { backgroundColor: colors.tabActive }]} />
+              )}
+            </View>
           ))}
         </View>
 
@@ -116,30 +117,24 @@ export function CustomTabNavigator() {
         {/* Right Side Tabs */}
         <View style={styles.rightTabs}>
           {TABS.slice(2).map((tab, index) => (
-            <TabButton
-              key={tab.name}
-              name={tab.name}
-              label={tab.label}
-              icon={tab.icon}
-              route={tab.route}
-              isActive={activeTab === tab.name}
-              colors={colors}
-              onPress={() => handleTabPress(tab.name, tab.route, index + 2)}
-            />
+            <View key={tab.name} style={styles.tabWrapper}>
+              <TabButton
+                name={tab.name}
+                label={tab.label}
+                icon={tab.icon}
+                route={tab.route}
+                isActive={activeTab === tab.name}
+                colors={colors}
+                onPress={() => handleTabPress(tab.name, tab.route, index + 2)}
+              />
+              {/* Individual Tab Indicator */}
+              {activeTab === tab.name && (
+                <View style={[styles.tabIndicator, { backgroundColor: colors.tabActive }]} />
+              )}
+            </View>
           ))}
         </View>
       </View>
-
-      {/* Shadow/Border */}
-      <View
-        style={[
-         styles.shadowLine,
-          {
-            backgroundColor: colors.border,
-            shadowColor: colors.shadow,
-          }
-        ]}
-      />
     </View>
   );
 }
@@ -151,6 +146,18 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     zIndex: 100,
+  },
+  tabWrapper: {
+    position: 'relative',
+    flex: 1,
+    alignItems: 'center',
+  },
+  tabIndicator: {
+    position: 'absolute',
+    top: 0,
+    height: 3,
+    width: 30,
+    borderRadius: 2,
   },
   navigationContainer: {
     height: Spacing.navigation.tabBarHeight,
