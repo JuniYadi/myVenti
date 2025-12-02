@@ -1,0 +1,22 @@
+{
+  "filePath": ".spec-workflow/specs/fuel-management/requirements.md",
+  "currentVersion": 2,
+  "snapshots": [
+    {
+      "version": 1,
+      "filename": "snapshot-001.json",
+      "timestamp": "2025-12-02T04:10:17.632Z",
+      "trigger": "initial",
+      "approvalId": "approval_1764648617623_912i284a0",
+      "approvalTitle": "Fuel Management Requirements Approval"
+    },
+    {
+      "version": 2,
+      "filename": "snapshot-002.json",
+      "timestamp": "2025-12-02T04:13:54.657Z",
+      "trigger": "approved",
+      "approvalId": "approval_1764648617623_912i284a0",
+      "approvalTitle": "Fuel Management Requirements Approval"
+    }
+  ]
+}
