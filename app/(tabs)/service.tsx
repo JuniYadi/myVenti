@@ -175,9 +175,16 @@ export default function ServiceScreen() {
         {showForm ? (
           <View style={styles.formContainer}>
             <View style={styles.formHeader}>
+              <TouchableOpacity
+                style={[styles.backButton, { backgroundColor: colors.surface }]}
+                onPress={handleFormCancel}
+              >
+                <IconSymbol name="chevron.left" size={16} color={colors.text} />
+              </TouchableOpacity>
               <ThemedText style={[styles.formTitle, { color: colors.text }]}>
-                {editingRecord ? 'Edit Service Record' : 'Add Service Record'}
+                {editingRecord ? 'Edit Service' : 'Add Service'}
               </ThemedText>
+              <View style={styles.spacer} />
             </View>
             <ServiceForm
               serviceRecord={editingRecord}
@@ -352,7 +359,9 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.lg,
   },
   formHeader: {
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
     marginBottom: Spacing.md,
     paddingBottom: Spacing.md,
     borderBottomWidth: 1,
@@ -361,7 +370,20 @@ const styles = StyleSheet.create({
   formTitle: {
     fontSize: Typography.sizes.title,
     fontWeight: Typography.weights.semibold,
+    flex: 1,
     textAlign: 'center',
+  },
+  backButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#ddd',
+  },
+  spacer: {
+    width: 32,
   },
   serviceCard: {
     padding: Spacing.card.padding,
