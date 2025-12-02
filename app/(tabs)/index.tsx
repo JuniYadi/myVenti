@@ -13,7 +13,7 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Colors, Spacing, Typography } from '@/constants/theme';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { DashboardSummary, RecentActivity, VehicleFormData } from '@/types/data';
-import { VehicleService, FuelService, ServiceService, DashboardService } from '@/services/index';
+import { VehicleService, DashboardService } from '@/services/index';
 import { useRouter } from 'expo-router';
 import { VehicleForm } from '@/components/forms/VehicleForm';
 import { FormModal } from '@/components/modals/FormModal';
@@ -32,7 +32,6 @@ export default function HomeScreen() {
   });
 
   const [recentActivity, setRecentActivity] = useState<RecentActivity[]>([]);
-  const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [vehicleModalVisible, setVehicleModalVisible] = useState(false);
 
@@ -42,7 +41,6 @@ export default function HomeScreen() {
 
   const loadDashboardData = async () => {
     try {
-      setLoading(true);
       const [summary, activity] = await Promise.all([
         DashboardService.getSummary(),
         DashboardService.getRecentActivity(10),
@@ -54,7 +52,6 @@ export default function HomeScreen() {
       console.error('Error loading dashboard data:', error);
       // Silently fail for dashboard - don't show alerts on home screen
     } finally {
-      setLoading(false);
       setRefreshing(false);
     }
   };
