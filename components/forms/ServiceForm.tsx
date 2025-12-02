@@ -27,6 +27,7 @@ interface ServiceFormProps {
   onSubmit: (data: ServiceFormData) => Promise<void>;
   onCancel: () => void;
   submitButtonText?: string;
+  showCancelButton?: boolean;
 }
 
 // Common service types with suggestions
@@ -60,6 +61,7 @@ export function ServiceForm({
   onSubmit,
   onCancel,
   submitButtonText = 'Add Service Record',
+  showCancelButton = true,
 }: ServiceFormProps) {
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null);
@@ -352,16 +354,23 @@ export function ServiceForm({
 
           {/* Action Buttons */}
           <View style={styles.buttonContainer}>
-            <TouchableOpacity
-              style={[styles.button, styles.cancelButton]}
-              onPress={onCancel}
-              disabled={loading}
-            >
-              <ThemedText style={styles.cancelButtonText}>Cancel</ThemedText>
-            </TouchableOpacity>
+            {showCancelButton && (
+              <TouchableOpacity
+                style={[styles.button, styles.cancelButton]}
+                onPress={onCancel}
+                disabled={loading}
+              >
+                <ThemedText style={styles.cancelButtonText}>Cancel</ThemedText>
+              </TouchableOpacity>
+            )}
 
             <TouchableOpacity
-              style={[styles.button, styles.submitButton, loading && styles.buttonDisabled]}
+              style={[
+                styles.button,
+                styles.submitButton,
+                loading && styles.buttonDisabled,
+                !showCancelButton && styles.fullWidthButton
+              ]}
               onPress={handleSubmit}
               disabled={loading}
             >
@@ -507,5 +516,8 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: '#fff',
+  },
+  fullWidthButton: {
+    flex: 1,
   },
 });
