@@ -178,19 +178,13 @@ export default function ServiceScreen() {
               <ThemedText style={[styles.formTitle, { color: colors.text }]}>
                 {editingRecord ? 'Edit Service Record' : 'Add Service Record'}
               </ThemedText>
-              <TouchableOpacity
-                style={[styles.cancelButton, { backgroundColor: colors.surface }]}
-                onPress={handleFormCancel}
-              >
-                <IconSymbol name="xmark" size={16} color={colors.text} />
-                <ThemedText style={[styles.cancelButtonText, { color: colors.text }]}>Cancel</ThemedText>
-              </TouchableOpacity>
             </View>
             <ServiceForm
               serviceRecord={editingRecord}
               onSubmit={handleServiceSubmit}
               onCancel={handleFormCancel}
               submitButtonText={editingRecord ? 'Update Service' : 'Add Service'}
+              showCancelButton={false}
             />
           </View>
         ) : (
@@ -358,8 +352,6 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.lg,
   },
   formHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: Spacing.md,
     paddingBottom: Spacing.md,
@@ -369,20 +361,7 @@ const styles = StyleSheet.create({
   formTitle: {
     fontSize: Typography.sizes.title,
     fontWeight: Typography.weights.semibold,
-  },
-  cancelButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.sm,
-    borderRadius: Spacing.card.borderRadius,
-    borderWidth: 1,
-    borderColor: '#ddd',
-    gap: Spacing.xs,
-  },
-  cancelButtonText: {
-    fontSize: Typography.sizes.caption,
-    fontWeight: Typography.weights.medium,
+    textAlign: 'center',
   },
   serviceCard: {
     padding: Spacing.card.padding,
