@@ -40,64 +40,38 @@ export function FormModal({
 }: FormModalProps) {
   const colorScheme = useColorScheme() ?? 'light';
   const slideAnim = React.useRef(new Animated.Value(100)).current;
-  const overlayAnim = React.useRef(new Animated.Value(0)).current;
 
   React.useEffect(() => {
     if (visible) {
       // Reset animation values and animate in
       slideAnim.setValue(100);
-      overlayAnim.setValue(0);
-      Animated.parallel([
-        Animated.timing(slideAnim, {
-          toValue: 0,
-          duration: 300,
-          useNativeDriver: true,
-        }),
-        Animated.timing(overlayAnim, {
-          toValue: 1,
-          duration: 300,
-          useNativeDriver: true,
-        }),
-      ]).start();
+      Animated.timing(slideAnim, {
+        toValue: 0,
+        duration: 300,
+        useNativeDriver: true,
+      }).start();
     } else {
       // Animate out
-      Animated.parallel([
-        Animated.timing(slideAnim, {
-          toValue: 100,
-          duration: 250,
-          useNativeDriver: true,
-        }),
-        Animated.timing(overlayAnim, {
-          toValue: 0,
-          duration: 250,
-          useNativeDriver: true,
-        }),
-      ]).start();
-    }
-  }, [visible, slideAnim, overlayAnim]);
-
-  const handleClose = () => {
-    // Animate out first, then call onClose
-    Animated.parallel([
       Animated.timing(slideAnim, {
         toValue: 100,
         duration: 250,
         useNativeDriver: true,
-      }),
-      Animated.timing(overlayAnim, {
-        toValue: 0,
-        duration: 250,
-        useNativeDriver: true,
-      }),
-    ]).start(() => {
+      }).start();
+    }
+  }, [visible, slideAnim]);
+
+  const handleClose = () => {
+    // Animate out first, then call onClose
+    Animated.timing(slideAnim, {
+      toValue: 100,
+      duration: 250,
+      useNativeDriver: true,
+    }).start(() => {
       onClose();
     });
   };
 
-  const handleOverlayPress = () => {
-    handleClose();
-  };
-
+  
   return (
     <Modal
       visible={visible}
@@ -105,23 +79,7 @@ export function FormModal({
       animationType="none"
       statusBarTranslucent={true}
     >
-      {/* Overlay */}
-      <Animated.View
-        style={[
-          styles.overlay,
-          {
-            opacity: overlayAnim,
-            backgroundColor: colorScheme === 'dark' ? 'rgba(0,0,0,0.8)' : 'rgba(0,0,0,0.5)',
-          },
-        ]}
-      >
-        <TouchableOpacity
-          style={styles.overlayTouchable}
-          activeOpacity={1}
-          onPress={handleOverlayPress}
-        />
-      </Animated.View>
-
+      
       {/* Modal Content */}
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -132,7 +90,7 @@ export function FormModal({
             styles.modalContainer,
             {
               transform: [{ translateY: slideAnim }],
-              opacity: overlayAnim,
+              opacity: 1,
               maxWidth,
             },
           ]}
@@ -164,13 +122,6 @@ export function FormModal({
 }
 
 const styles = StyleSheet.create({
-  overlay: {
-    ...StyleSheet.absoluteFillObject,
-    zIndex: 1000,
-  },
-  overlayTouchable: {
-    flex: 1,
-  },
   keyboardAvoidingView: {
     flex: 1,
     justifyContent: 'flex-end',
