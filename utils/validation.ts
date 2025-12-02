@@ -961,13 +961,4 @@ export const LocationValidation = {
   },
 };
 
-// Export all validation utilities for easy importing
-export {
-  VehicleValidation,
-  FuelValidation,
-  ServiceValidation,
-  ValidationUtils,
-  DateRangeValidation,
-  PriceRangeValidation,
-  LocationValidation,
-};
+// Validation utilities are already exported inline above
