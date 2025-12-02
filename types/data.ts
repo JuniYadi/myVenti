@@ -27,6 +27,12 @@ export interface FuelEntry {
   pricePerUnit: number;
   mileage: number;
   mpg?: number; // calculated for gas vehicles only
+  fuelStation?: string;
+  location?: {
+    latitude: number;
+    longitude: number;
+  };
+  notes?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -61,6 +67,8 @@ export interface FuelFormData {
   quantity: string;
   pricePerUnit: string;
   mileage: string;
+  fuelStation?: string;
+  notes?: string;
 }
 
 export interface ServiceFormData {
@@ -92,14 +100,44 @@ export interface RecentActivity {
   color: string;
 }
 
-// Export all types for easy importing
-export type {
-  Vehicle,
-  FuelEntry,
-  ServiceRecord,
-  VehicleFormData,
-  FuelFormData,
-  ServiceFormData,
-  DashboardSummary,
-  RecentActivity,
-};
+// Enhanced fuel management types for analytics and filtering
+export interface FuelAnalytics {
+  period: {
+    start: string;
+    end: string;
+  };
+  vehicleId?: string;
+  statistics: {
+    totalFuel: number;
+    totalCost: number;
+    averageMPG: number;
+    averageCostPerMile: number;
+    tripsCount: number;
+  };
+  trends: {
+    fuelEfficiency: number[];
+    costTrend: number[];
+    consumptionPattern: {
+      daily: number[];
+      weekly: number[];
+      monthly: number[];
+    };
+  };
+}
+
+export interface FuelSearchFilter {
+  vehicleId?: string;
+  dateRange?: {
+    start: string;
+    end: string;
+  };
+  priceRange?: {
+    min: number;
+    max: number;
+  };
+  fuelStation?: string;
+  sortBy: 'date' | 'cost' | 'mpg';
+  sortOrder: 'asc' | 'desc';
+}
+
+// All types are already exported with their interface declarations
