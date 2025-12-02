@@ -6,6 +6,12 @@
                 "@pimzino/spec-workflow-mcp@latest",
                 "/home/juniyadi/github/JuniYadi/myVenti"
             ]
+        },
+        "android-adb": {
+            "command": "bunx",
+            "args": [
+                "@landicefu/android-adb-mcp-server"
+            ]
         }
     }
 }
