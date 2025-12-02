@@ -1,6 +1,5 @@
 /**
- * FormModal component for presenting forms in a consistent modal
- * Provides animations, proper overlay handling, and keyboard management
+ * Simple FormModal component that works consistently across platforms
  */
 
 import React from 'react';
@@ -10,14 +9,10 @@ import {
   TouchableOpacity,
   StyleSheet,
   Animated,
-  KeyboardAvoidingView,
-  Platform,
   Dimensions,
+  Platform,
+  Text,
 } from 'react-native';
-import { ThemedView } from '@/components/themed-view';
-import { ThemedText } from '@/components/themed-text';
-import { IconSymbol } from '@/components/ui/icon-symbol';
-import { useColorScheme } from '@/hooks/use-color-scheme';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -38,22 +33,21 @@ export function FormModal({
   maxWidth = 500,
   showCloseButton = true,
 }: FormModalProps) {
-  const colorScheme = useColorScheme() ?? 'light';
-  const slideAnim = React.useRef(new Animated.Value(100)).current;
+  const slideAnim = React.useRef(new Animated.Value(SCREEN_HEIGHT)).current;
 
   React.useEffect(() => {
     if (visible) {
-      // Reset animation values and animate in
-      slideAnim.setValue(100);
+      // Animate in from bottom
+      slideAnim.setValue(SCREEN_HEIGHT);
       Animated.timing(slideAnim, {
         toValue: 0,
         duration: 300,
         useNativeDriver: true,
       }).start();
     } else {
-      // Animate out
+      // Animate out to bottom
       Animated.timing(slideAnim, {
-        toValue: 100,
+        toValue: SCREEN_HEIGHT,
         duration: 250,
         useNativeDriver: true,
       }).start();
@@ -63,7 +57,7 @@ export function FormModal({
   const handleClose = () => {
     // Animate out first, then call onClose
     Animated.timing(slideAnim, {
-      toValue: 100,
+      toValue: SCREEN_HEIGHT,
       duration: 250,
       useNativeDriver: true,
     }).start(() => {
@@ -71,7 +65,6 @@ export function FormModal({
     });
   };
 
-  
   return (
     <Modal
       visible={visible}
@@ -79,33 +72,29 @@ export function FormModal({
       animationType="none"
       statusBarTranslucent={true}
     >
-      
-      {/* Modal Content */}
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.keyboardAvoidingView}
-      >
+      {/* Semi-transparent backdrop */}
+      <View style={styles.backdrop}>
+        {/* Modal Content */}
         <Animated.View
           style={[
             styles.modalContainer,
             {
               transform: [{ translateY: slideAnim }],
-              opacity: 1,
               maxWidth,
             },
           ]}
         >
-          <ThemedView style={styles.modalContent}>
+          <View style={styles.modalContent}>
             {/* Header */}
             <View style={styles.header}>
-              <ThemedText style={styles.title}>{title}</ThemedText>
+              <Text style={styles.title}>{title}</Text>
               {showCloseButton && (
                 <TouchableOpacity
                   style={styles.closeButton}
                   onPress={handleClose}
                   activeOpacity={0.7}
                 >
-                  <IconSymbol name="xmark" size={24} color="#666" />
+                  <Text style={styles.closeButtonText}>×</Text>
                 </TouchableOpacity>
               )}
             </View>
@@ -114,26 +103,26 @@ export function FormModal({
             <View style={styles.contentContainer}>
               {children}
             </View>
-          </ThemedView>
+          </View>
         </Animated.View>
-      </KeyboardAvoidingView>
+      </View>
     </Modal>
   );
 }
 
 const styles = StyleSheet.create({
-  keyboardAvoidingView: {
+  backdrop: {
     flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
     justifyContent: 'flex-end',
   },
   modalContainer: {
     width: '100%',
     maxHeight: SCREEN_HEIGHT * 0.9,
     marginHorizontal: 20,
-    zIndex: 1001,
   },
   modalContent: {
-    flex: 1,
+    backgroundColor: '#fff',
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     shadowColor: '#000',
@@ -158,15 +147,24 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 20,
     fontWeight: 'bold',
+    color: '#000',
     flex: 1,
   },
   closeButton: {
     padding: 8,
     borderRadius: 20,
     backgroundColor: '#f2f2f7',
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  closeButtonText: {
+    fontSize: 24,
+    color: '#666',
+    lineHeight: 24,
   },
   contentContainer: {
     flex: 1,
-    overflow: 'hidden',
   },
 });
