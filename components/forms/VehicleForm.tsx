@@ -62,9 +62,6 @@ export function VehicleForm({
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
-      <Text style={styles.title}>
-        {vehicle ? 'Edit Vehicle' : 'Add New Vehicle'}
-      </Text>
 
       {/* Vehicle Name */}
       <View style={styles.fieldGroup}>
@@ -167,30 +164,24 @@ const styles = StyleSheet.create({
   contentContainer: {
     padding: 20,
   },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginBottom: 24,
-    textAlign: 'center',
-    color: '#000',
-  },
   fieldGroup: {
-    marginBottom: 20,
+    marginBottom: 24,
   },
   label: {
     fontSize: 16,
     fontWeight: '600',
-    marginBottom: 8,
+    marginBottom: 12,
     color: '#000',
   },
   input: {
     borderWidth: 1,
     borderColor: '#ddd',
     borderRadius: 8,
-    padding: 12,
+    padding: 16,
     fontSize: 16,
     backgroundColor: '#fff',
     color: '#000',
+    placeholderTextColor: '#666',
   },
   typeContainer: {
     flexDirection: 'row',
@@ -198,21 +189,31 @@ const styles = StyleSheet.create({
   },
   typeOption: {
     flex: 1,
-    padding: 12,
-    borderWidth: 1,
+    padding: 16,
+    borderWidth: 2,
     borderColor: '#ddd',
     borderRadius: 8,
     backgroundColor: '#fff',
     alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 1,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
   },
   typeOptionSelected: {
     backgroundColor: '#007AFF',
     borderColor: '#007AFF',
+    shadowColor: '#007AFF',
+    shadowOpacity: 0.3,
   },
   typeLabel: {
     fontSize: 14,
-    fontWeight: '500',
-    color: '#000',
+    fontWeight: '600',
+    color: '#333',
   },
   typeLabelSelected: {
     color: '#fff',
@@ -220,30 +221,32 @@ const styles = StyleSheet.create({
   buttonContainer: {
     flexDirection: 'row',
     gap: 12,
-    marginTop: 32,
-    marginBottom: 20,
+    marginTop: 40,
+    marginBottom: 40,
   },
   button: {
     flex: 1,
-    padding: 16,
-    borderRadius: 8,
+    paddingVertical: 20,
+    paddingHorizontal: 24,
+    borderRadius: 12,
     alignItems: 'center',
+    minHeight: 56,
   },
   cancelButton: {
     backgroundColor: '#f2f2f7',
-    borderWidth: 1,
+    borderWidth: 2,
     borderColor: '#ddd',
   },
   submitButton: {
     backgroundColor: '#007AFF',
   },
   cancelButtonText: {
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: '600',
-    color: '#000',
+    color: '#333',
   },
   submitButtonText: {
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: '600',
     color: '#fff',
   },

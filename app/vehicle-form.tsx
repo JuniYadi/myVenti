@@ -66,10 +66,6 @@ export default function VehicleFormScreen() {
   return (
     <ThemedView style={styles.container}>
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.contentContainer}>
-        <ThemedText style={styles.title}>
-          {isEditing ? 'Edit Vehicle' : 'Add New Vehicle'}
-        </ThemedText>
-
         {loading ? (
           <ThemedText style={styles.loadingText}>Loading...</ThemedText>
         ) : (
