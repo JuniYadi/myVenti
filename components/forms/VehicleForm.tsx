@@ -9,8 +9,6 @@ import {
   TextInput,
   StyleSheet,
   Alert,
-  KeyboardAvoidingView,
-  Platform,
   ScrollView,
   TouchableOpacity,
   ActivityIndicator,
@@ -102,19 +100,13 @@ export function VehicleForm({
   };
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      style={styles.container}
-    >
-      <ThemedView style={styles.content}>
-        <ScrollView showsVerticalScrollIndicator={false}>
-          {/* Loading Overlay */}
-          {loading && (
-            <View style={styles.loadingOverlay}>
-              <ActivityIndicator size="large" color="#007AFF" />
-              <ThemedText style={styles.loadingText}>Saving vehicle...</ThemedText>
-            </View>
-          )}
+    <View style={styles.container}>
+      <View style={styles.content}>
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          style={styles.scrollView}
+        >
           <ThemedText style={styles.title}>
             {vehicle ? 'Edit Vehicle' : 'Add New Vehicle'}
           </ThemedText>
@@ -236,8 +228,16 @@ export function VehicleForm({
             </TouchableOpacity>
           </View>
         </ScrollView>
-      </ThemedView>
-    </KeyboardAvoidingView>
+
+        {/* Loading Overlay */}
+        {loading && (
+          <View style={styles.loadingOverlay}>
+            <ActivityIndicator size="large" color="#007AFF" />
+            <ThemedText style={styles.loadingText}>Saving vehicle...</ThemedText>
+          </View>
+        )}
+      </View>
+    </View>
   );
 }
 
@@ -248,7 +248,9 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     padding: 20,
-    position: 'relative',
+  },
+  scrollView: {
+    flex: 1,
   },
   title: {
     fontSize: 24,
@@ -345,13 +347,13 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 1000,
   },
   loadingText: {
-    color: '#fff',
+    color: '#007AFF',
     fontSize: 16,
     fontWeight: '600',
     marginTop: 12,
