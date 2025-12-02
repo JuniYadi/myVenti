@@ -13,6 +13,7 @@ import {
   Platform,
   ScrollView,
   TouchableOpacity,
+  ActivityIndicator,
 } from 'react-native';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -107,6 +108,13 @@ export function VehicleForm({
     >
       <ThemedView style={styles.content}>
         <ScrollView showsVerticalScrollIndicator={false}>
+          {/* Loading Overlay */}
+          {loading && (
+            <View style={styles.loadingOverlay}>
+              <ActivityIndicator size="large" color="#007AFF" />
+              <ThemedText style={styles.loadingText}>Saving vehicle...</ThemedText>
+            </View>
+          )}
           <ThemedText style={styles.title}>
             {vehicle ? 'Edit Vehicle' : 'Add New Vehicle'}
           </ThemedText>
@@ -240,6 +248,7 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     padding: 20,
+    position: 'relative',
   },
   title: {
     fontSize: 24,
@@ -329,5 +338,23 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: '#fff',
+  },
+  loadingOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 1000,
+  },
+  loadingText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+    marginTop: 12,
+    textAlign: 'center',
   },
 });
