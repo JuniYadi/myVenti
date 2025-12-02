@@ -44,7 +44,9 @@ export function FormModal({
 
   React.useEffect(() => {
     if (visible) {
-      // Animate in
+      // Reset animation values and animate in
+      slideAnim.setValue(100);
+      overlayAnim.setValue(0);
       Animated.parallel([
         Animated.timing(slideAnim, {
           toValue: 0,
@@ -61,7 +63,7 @@ export function FormModal({
       // Animate out
       Animated.parallel([
         Animated.timing(slideAnim, {
-          toValue: SCREEN_HEIGHT,
+          toValue: 100,
           duration: 250,
           useNativeDriver: true,
         }),
