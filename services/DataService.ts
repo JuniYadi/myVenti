@@ -173,8 +173,10 @@ export class FuelService {
       // Calculate MPG for gas vehicles if we have previous entries for the same vehicle
       let mpg: number | undefined;
       const vehicle = await VehicleService.getById(formData.vehicleId);
+
       if (vehicle && vehicle.type !== 'electric') {
         const previousEntries = await this.getByVehicleId(formData.vehicleId);
+
         if (previousEntries.length > 0) {
           const lastEntry = previousEntries[0];
           const currentMileage = parseInt(formData.mileage);
@@ -204,6 +206,7 @@ export class FuelService {
 
       entries.push(newEntry);
       await AsyncStorage.setItem(STORAGE_KEYS.FUEL_ENTRIES, JSON.stringify(entries));
+
       return newEntry;
     } catch (error) {
       handleStorageError(error, 'FuelService.create');
