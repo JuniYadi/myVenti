@@ -6,7 +6,6 @@ import {
   TouchableOpacity,
   Alert,
   RefreshControl,
-  Modal,
 } from 'react-native';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -26,7 +25,7 @@ export default function ServiceScreen() {
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
-  const [modalVisible, setModalVisible] = useState(false);
+  const [showForm, setShowForm] = useState(false);
   const [editingRecord, setEditingRecord] = useState<ServiceRecord | null>(null);
   const [yearlyTotal, setYearlyTotal] = useState(0);
 
@@ -80,12 +79,12 @@ export default function ServiceScreen() {
 
   const handleAddRecord = () => {
     setEditingRecord(null);
-    setModalVisible(true);
+    setShowForm(true);
   };
 
   const handleEditRecord = (record: ServiceRecord) => {
     setEditingRecord(record);
-    setModalVisible(true);
+    setShowForm(true);
   };
 
   const handleDeleteRecord = (record: ServiceRecord) => {
@@ -124,7 +123,7 @@ export default function ServiceScreen() {
         await ServiceService.create(formData);
         Alert.alert('Success', 'Service record added successfully!');
       }
-      setModalVisible(false);
+      setShowForm(false);
       setEditingRecord(null);
       loadData();
     } catch (error) {
@@ -134,7 +133,7 @@ export default function ServiceScreen() {
   };
 
   const handleFormCancel = () => {
-    setModalVisible(false);
+    setShowForm(false);
     setEditingRecord(null);
   };
 
@@ -172,98 +171,118 @@ export default function ServiceScreen() {
           </ThemedText>
         </View>
 
-        {/* Summary Cards */}
-        <View style={styles.summarySection}>
-          <View
-            style={[
-              styles.summaryCard,
-              { backgroundColor: colors.warning },
-            ]}
-          >
-            <IconSymbol name="wrench.fill" size={24} color="white" />
-            <ThemedText style={styles.summaryValue}>
-              {serviceRecords.filter(record => isUpcoming(record.date)).length}
-            </ThemedText>
-            <ThemedText style={styles.summaryLabel}>Upcoming</ThemedText>
-          </View>
-          <View
-            style={[
-              styles.summaryCard,
-              { backgroundColor: colors.primary },
-            ]}
-          >
-            <IconSymbol name="dollarsign.circle" size={24} color="white" />
-            <ThemedText style={styles.summaryValue}>
-              ${yearlyTotal.toFixed(0)}
-            </ThemedText>
-            <ThemedText style={styles.summaryLabel}>This Year</ThemedText>
-          </View>
-        </View>
-
-        {serviceRecords.length === 0 && !loading ? (
-          <View style={styles.emptyState}>
-            <IconSymbol
-              name="wrench.fill"
-              size={64}
-              color={colors.icon}
-              style={styles.emptyIcon}
+        {/* Show Form or List Content */}
+        {showForm ? (
+          <View style={styles.formContainer}>
+            <View style={styles.formHeader}>
+              <ThemedText style={[styles.formTitle, { color: colors.text }]}>
+                {editingRecord ? 'Edit Service Record' : 'Add Service Record'}
+              </ThemedText>
+              <TouchableOpacity
+                style={[styles.cancelButton, { backgroundColor: colors.surface }]}
+                onPress={handleFormCancel}
+              >
+                <IconSymbol name="xmark" size={16} color={colors.text} />
+                <ThemedText style={[styles.cancelButtonText, { color: colors.text }]}>Cancel</ThemedText>
+              </TouchableOpacity>
+            </View>
+            <ServiceForm
+              serviceRecord={editingRecord}
+              onSubmit={handleServiceSubmit}
+              onCancel={handleFormCancel}
+              submitButtonText={editingRecord ? 'Update Service' : 'Add Service'}
             />
-            <ThemedText style={[styles.emptyTitle, { color: colors.text }]}>
-              No Service Records Yet
-            </ThemedText>
-            <ThemedText style={[styles.emptySubtitle, { color: colors.icon }]}>
-              Add your first service record to start tracking maintenance history
-            </ThemedText>
           </View>
         ) : (
-          <View style={styles.serviceList}>
-            <ThemedText style={[styles.sectionTitle, { color: colors.text }]}>
-              Service Records
-            </ThemedText>
+          <>
+            {/* Summary Cards */}
+            <View style={styles.summarySection}>
+              <View
+                style={[
+                  styles.summaryCard,
+                  { backgroundColor: colors.warning },
+                ]}
+              >
+                <IconSymbol name="wrench.fill" size={24} color="white" />
+                <ThemedText style={styles.summaryValue}>
+                  {serviceRecords.filter(record => isUpcoming(record.date)).length}
+                </ThemedText>
+                <ThemedText style={styles.summaryLabel}>Upcoming</ThemedText>
+              </View>
+              <View
+                style={[
+                  styles.summaryCard,
+                  { backgroundColor: colors.primary },
+                ]}
+              >
+                <IconSymbol name="dollarsign.circle" size={24} color="white" />
+                <ThemedText style={styles.summaryValue}>
+                  ${yearlyTotal.toFixed(0)}
+                </ThemedText>
+                <ThemedText style={styles.summaryLabel}>This Year</ThemedText>
+              </View>
+            </View>
 
-            {serviceRecords.map((record) => {
-              const vehicle = vehicles.find(v => v.id === record.vehicleId);
-              if (!vehicle) return null;
-
-              return (
-                <ServiceRecordCard
-                  key={record.id}
-                  serviceRecord={record}
-                  vehicle={vehicle}
-                  onEdit={handleEditRecord}
-                  onDelete={handleDeleteRecord}
+            {serviceRecords.length === 0 && !loading ? (
+              <View style={styles.emptyState}>
+                <IconSymbol
+                  name="wrench.fill"
+                  size={64}
+                  color={colors.icon}
+                  style={styles.emptyIcon}
                 />
-              );
-            })}
-          </View>
+                <ThemedText style={[styles.emptyTitle, { color: colors.text }]}>
+                  No Service Records Yet
+                </ThemedText>
+                <ThemedText style={[styles.emptySubtitle, { color: colors.icon }]}>
+                  Add your first service record to start tracking maintenance history
+                </ThemedText>
+              </View>
+            ) : (
+              <View style={styles.serviceList}>
+                <View style={styles.recordsHeader}>
+                  <ThemedText style={[styles.sectionTitle, { color: colors.text }]}>
+                    Service Records
+                  </ThemedText>
+                  <TouchableOpacity
+                    style={[styles.addButton, { backgroundColor: colors.primary }]}
+                    onPress={handleAddRecord}
+                  >
+                    <IconSymbol name="plus" size={16} color="white" />
+                    <ThemedText style={styles.addButtonText}>Add</ThemedText>
+                  </TouchableOpacity>
+                </View>
+
+                {serviceRecords.map((record) => {
+                  const vehicle = vehicles.find(v => v.id === record.vehicleId);
+                  if (!vehicle) return null;
+
+                  return (
+                    <ServiceRecordCard
+                      key={record.id}
+                      serviceRecord={record}
+                      vehicle={vehicle}
+                      onEdit={handleEditRecord}
+                      onDelete={handleDeleteRecord}
+                    />
+                  );
+                })}
+              </View>
+            )}
+
+            {/* Add Service Record Button - Only show when not empty and form not shown */}
+            {serviceRecords.length === 0 && (
+              <TouchableOpacity
+                style={[styles.addButton, { backgroundColor: colors.primary }]}
+                onPress={handleAddRecord}
+              >
+                <IconSymbol name="plus" size={24} color="white" />
+                <ThemedText style={styles.addButtonText}>Add Service Record</ThemedText>
+              </TouchableOpacity>
+            )}
+          </>
         )}
-
-        {/* Add Service Record Button */}
-        <TouchableOpacity
-          style={[styles.addButton, { backgroundColor: colors.primary }]}
-          onPress={handleAddRecord}
-        >
-          <IconSymbol name="plus" size={24} color="white" />
-          <ThemedText style={styles.addButtonText}>Add Service Record</ThemedText>
-        </TouchableOpacity>
       </ScrollView>
-
-      {/* Service Form Modal */}
-      <Modal
-        visible={modalVisible}
-        animationType="slide"
-        presentationStyle="pageSheet"
-        onRequestClose={handleFormCancel}
-      >
-        <View style={[styles.modalContainer, { backgroundColor: colors.background }]}>
-          <ServiceForm
-            serviceRecord={editingRecord}
-            onSubmit={handleServiceSubmit}
-            onCancel={handleFormCancel}
-            submitButtonText={editingRecord ? 'Update Service' : 'Add Service'}
-          />
-        </View>
-      </Modal>
     </ThemedView>
   );
 }
@@ -327,6 +346,43 @@ const styles = StyleSheet.create({
   serviceList: {
     gap: Spacing.md,
     marginBottom: Spacing.lg,
+  },
+  recordsHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: Spacing.md,
+  },
+  formContainer: {
+    flex: 1,
+    marginBottom: Spacing.lg,
+  },
+  formHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: Spacing.md,
+    paddingBottom: Spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
+  },
+  formTitle: {
+    fontSize: Typography.sizes.title,
+    fontWeight: Typography.weights.semibold,
+  },
+  cancelButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+    borderRadius: Spacing.card.borderRadius,
+    borderWidth: 1,
+    borderColor: '#ddd',
+    gap: Spacing.xs,
+  },
+  cancelButtonText: {
+    fontSize: Typography.sizes.caption,
+    fontWeight: Typography.weights.medium,
   },
   serviceCard: {
     padding: Spacing.card.padding,
@@ -441,8 +497,5 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 22,
     maxWidth: 280,
-  },
-  modalContainer: {
-    flex: 1,
   },
 });
