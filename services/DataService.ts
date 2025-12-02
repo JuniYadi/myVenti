@@ -824,6 +824,45 @@ export class ServiceService {
     }
   }
 
+  static async getById(id: string): Promise<ServiceRecord | null> {
+    try {
+      const records = await this.getAll();
+      return records.find(record => record.id === id) || null;
+    } catch (error) {
+      handleStorageError(error, 'ServiceService.getById');
+      return null;
+    }
+  }
+
+  static async update(id: string, formData: ServiceFormData): Promise<ServiceRecord | null> {
+    try {
+      const records = await this.getAll();
+      const index = records.findIndex(record => record.id === id);
+
+      if (index === -1) {
+        return null; // Record not found
+      }
+
+      records[index] = {
+        ...records[index],
+        vehicleId: formData.vehicleId,
+        date: formData.date,
+        type: formData.type.trim(),
+        description: formData.description.trim(),
+        cost: parseFloat(formData.cost),
+        mileage: parseInt(formData.mileage),
+        notes: formData.notes?.trim(),
+        updatedAt: getCurrentTimestamp(),
+      };
+
+      await AsyncStorage.setItem(STORAGE_KEYS.SERVICE_RECORDS, JSON.stringify(records));
+      return records[index];
+    } catch (error) {
+      handleStorageError(error, 'ServiceService.update');
+      throw error;
+    }
+  }
+
   static async deleteByVehicleId(vehicleId: string): Promise<void> {
     try {
       const records = await this.getAll();
