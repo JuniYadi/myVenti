@@ -11,7 +11,6 @@ import {
   Alert,
   ScrollView,
   TouchableOpacity,
-  ActivityIndicator,
 } from 'react-native';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -39,7 +38,6 @@ export function VehicleForm({
     type: vehicle?.type || 'gas',
   });
 
-  const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Partial<VehicleFormData>>({});
 
   const vehicleTypes: { value: VehicleType; label: string; icon: string }[] = [
@@ -80,14 +78,11 @@ export function VehicleForm({
       return;
     }
 
-    setLoading(true);
     try {
       await onSubmit(formData);
     } catch (error) {
       Alert.alert('Error', 'Failed to save vehicle. Please try again.');
       console.error('Vehicle form submission error:', error);
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -119,8 +114,7 @@ export function VehicleForm({
               placeholder="e.g., My Car, Family SUV"
               value={formData.name}
               onChangeText={(value) => updateFormData('name', value)}
-              editable={!loading}
-            />
+                          />
             {errors.name && (
               <ThemedText style={styles.errorText}>{errors.name}</ThemedText>
             )}
@@ -136,8 +130,7 @@ export function VehicleForm({
               onChangeText={(value) => updateFormData('year', value)}
               keyboardType="numeric"
               maxLength={4}
-              editable={!loading}
-            />
+                          />
             {errors.year && (
               <ThemedText style={styles.errorText}>{errors.year}</ThemedText>
             )}
@@ -152,8 +145,7 @@ export function VehicleForm({
               value={formData.make}
               onChangeText={(value) => updateFormData('make', value)}
               autoCapitalize="words"
-              editable={!loading}
-            />
+                          />
             {errors.make && (
               <ThemedText style={styles.errorText}>{errors.make}</ThemedText>
             )}
@@ -168,8 +160,7 @@ export function VehicleForm({
               value={formData.model}
               onChangeText={(value) => updateFormData('model', value)}
               autoCapitalize="words"
-              editable={!loading}
-            />
+                          />
             {errors.model && (
               <ThemedText style={styles.errorText}>{errors.model}</ThemedText>
             )}
@@ -187,8 +178,7 @@ export function VehicleForm({
                     formData.type === type.value && styles.typeOptionSelected,
                   ]}
                   onPress={() => updateFormData('type', type.value)}
-                  disabled={loading}
-                >
+                                  >
                   <IconSymbol
                     name={type.icon}
                     size={20}
@@ -212,30 +202,20 @@ export function VehicleForm({
             <TouchableOpacity
               style={[styles.button, styles.cancelButton]}
               onPress={onCancel}
-              disabled={loading}
-            >
+                          >
               <ThemedText style={styles.cancelButtonText}>Cancel</ThemedText>
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={[styles.button, styles.submitButton, loading && styles.buttonDisabled]}
+              style={[styles.button, styles.submitButton]}
               onPress={handleSubmit}
-              disabled={loading}
             >
               <ThemedText style={styles.submitButtonText}>
-                {loading ? 'Saving...' : submitButtonText}
+                {submitButtonText}
               </ThemedText>
             </TouchableOpacity>
           </View>
         </ScrollView>
-
-        {/* Loading Overlay */}
-        {loading && (
-          <View style={styles.loadingOverlay}>
-            <ActivityIndicator size="large" color="#007AFF" />
-            <ThemedText style={styles.loadingText}>Saving vehicle...</ThemedText>
-          </View>
-        )}
       </View>
     </View>
   );
@@ -329,9 +309,6 @@ const styles = StyleSheet.create({
   submitButton: {
     backgroundColor: '#007AFF',
   },
-  buttonDisabled: {
-    opacity: 0.6,
-  },
   cancelButtonText: {
     fontSize: 16,
     fontWeight: '600',
@@ -340,23 +317,5 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: '#fff',
-  },
-  loadingOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(255, 255, 255, 0.9)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    zIndex: 1000,
-  },
-  loadingText: {
-    color: '#007AFF',
-    fontSize: 16,
-    fontWeight: '600',
-    marginTop: 12,
-    textAlign: 'center',
   },
 });
