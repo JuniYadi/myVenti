@@ -15,7 +15,6 @@ import { IconSymbol } from '@/components/ui/icon-symbol';
 import { FuelEntry, Vehicle, VehicleType } from '@/types/data';
 import { FuelService, VehicleService, DashboardService } from '@/services/index';
 import { FuelForm } from '@/components/forms/FuelForm';
-import { FormModal } from '@/components/modals/FormModal';
 
 export default function FuelScreen() {
   const colorScheme = useColorScheme() ?? 'light';
@@ -296,8 +295,8 @@ export default function FuelScreen() {
         </TouchableOpacity>
       </ScrollView>
 
-      {/* Fuel Form Modal */}
-      <FormModal
+      {/* TODO: Create dedicated fuel form screen */}
+      {/* <FormModal
         visible={modalVisible}
         onClose={() => setModalVisible(false)}
         title={editingEntry ? 'Edit Fuel Entry' : 'Add Fuel Entry'}
@@ -308,7 +307,7 @@ export default function FuelScreen() {
           onCancel={() => setModalVisible(false)}
           submitButtonText={editingEntry ? 'Update Entry' : 'Add Entry'}
         />
-      </FormModal>
+      </FormModal> */}
     </ThemedView>
   );
 }

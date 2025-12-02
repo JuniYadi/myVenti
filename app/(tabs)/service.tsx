@@ -15,7 +15,6 @@ import { IconSymbol } from '@/components/ui/icon-symbol';
 import { ServiceRecord, Vehicle } from '@/types/data';
 import { ServiceService, VehicleService } from '@/services/index';
 import { ServiceForm } from '@/components/forms/ServiceForm';
-import { FormModal } from '@/components/modals/FormModal';
 
 export default function ServiceScreen() {
   const colorScheme = useColorScheme() ?? 'light';
@@ -304,8 +303,8 @@ export default function ServiceScreen() {
         </TouchableOpacity>
       </ScrollView>
 
-      {/* Service Form Modal */}
-      <FormModal
+      {/* TODO: Create dedicated service form screen */}
+      {/* <FormModal
         visible={modalVisible}
         onClose={() => setModalVisible(false)}
         title={editingRecord ? 'Edit Service Record' : 'Add Service Record'}
@@ -316,7 +315,7 @@ export default function ServiceScreen() {
           onCancel={() => setModalVisible(false)}
           submitButtonText={editingRecord ? 'Update Record' : 'Add Record'}
         />
-      </FormModal>
+      </FormModal> */}
     </ThemedView>
   );
 }

@@ -1,5 +1,3 @@
-import { VehicleForm } from '@/components/forms/VehicleForm';
-import { FormModal } from '@/components/modals/FormModal';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { IconSymbol } from '@/components/ui/icon-symbol';
@@ -311,8 +309,8 @@ export default function HomeScreen() {
         <View style={{ height: Spacing.navigation.tabBarHeight + Spacing.lg }} />
       </ScrollView>
 
-      {/* Vehicle Form Modal */}
-      <FormModal
+      {/* TODO: Vehicle form now uses dedicated screen */}
+      {/* <FormModal
         visible={vehicleModalVisible}
         onClose={() => setVehicleModalVisible(false)}
         title="Add New Vehicle"
@@ -322,7 +320,7 @@ export default function HomeScreen() {
           onCancel={() => setVehicleModalVisible(false)}
           submitButtonText="Add Vehicle"
         />
-      </FormModal>
+      </FormModal> */}
     </ThemedView>
   );
 }
