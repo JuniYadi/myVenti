@@ -38,7 +38,7 @@ export function FuelEntryCard({ entry, vehicle, onEdit, onDelete, onPress }: Fue
   const translateX = useRef(new Animated.Value(0)).current;
   const lastOffset = useRef(0);
   const swipeThreshold = 80;
-  const actionButtonWidth = 70;
+  const actionButtonWidth = 60;
 
   // Format helpers
   const formatQuantity = () => {
@@ -181,7 +181,7 @@ export function FuelEntryCard({ entry, vehicle, onEdit, onDelete, onPress }: Fue
           onPress={handleEdit}
           activeOpacity={0.8}
         >
-          <IconSymbol name="pencil" size={20} color="white" />
+          <IconSymbol name="pencil" size={16} color="white" />
           <Text style={styles.actionButtonText}>Edit</Text>
         </TouchableOpacity>
 
@@ -190,7 +190,7 @@ export function FuelEntryCard({ entry, vehicle, onEdit, onDelete, onPress }: Fue
           onPress={handleDelete}
           activeOpacity={0.8}
         >
-          <IconSymbol name="trash" size={20} color="white" />
+          <IconSymbol name="trash" size={16} color="white" />
           <Text style={styles.actionButtonText}>Delete</Text>
         </TouchableOpacity>
       </Animated.View>
@@ -216,85 +216,35 @@ export function FuelEntryCard({ entry, vehicle, onEdit, onDelete, onPress }: Fue
             onPress={handleCardPress}
             activeOpacity={0.9}
           >
-            {/* Header with date and vehicle info */}
-            <View style={styles.header}>
-              <View style={styles.vehicleInfo}>
-                <View style={styles.vehicleHeader}>
-                  <IconSymbol
-                    name={getVehicleIcon()}
-                    size={16}
-                    color={getVehicleIconColor()}
-                    style={styles.vehicleIcon}
-                  />
-                  <ThemedText style={[styles.date, { color: colors.text }]}>
-                    {entry.date}
-                  </ThemedText>
-                </View>
-                <ThemedText style={[styles.vehicleName, { color: colors.icon }]}>
-                  {vehicle.name}
-                </ThemedText>
-                {entry.fuelStation && (
-                  <ThemedText style={[styles.fuelStation, { color: colors.icon }]}>
-                    {entry.fuelStation}
-                  </ThemedText>
-                )}
+            {/* SUPER COMPACT DESIGN */}
+            <View style={styles.compactContainer}>
+              {/* Single line with date, vehicle, and amount */}
+              <View style={styles.compactHeader}>
+                <IconSymbol
+                  name={getVehicleIcon()}
+                  size={12}
+                  color={getVehicleIconColor()}
+                />
+                <Text style={styles.compactDate}>{entry.date}</Text>
+                <Text style={styles.compactVehicle}>{vehicle.name}</Text>
+                <Text style={styles.compactAmount}>${entry.amount.toFixed(2)}</Text>
               </View>
 
-              <View style={styles.amountSection}>
-                <ThemedText style={[styles.amount, { color: colors.primary }]}>
-                  ${entry.amount.toFixed(2)}
-                </ThemedText>
-                <ThemedText style={[styles.quantity, { color: colors.icon }]}>
-                  {formatQuantity()}
-                </ThemedText>
+              {/* Single line with quantity and price */}
+              <View style={styles.compactSubHeader}>
+                <Text style={styles.compactQuantity}>{formatQuantity()}</Text>
+                <Text style={styles.compactPrice}>• ${entry.pricePerUnit.toFixed(2)}/{vehicle.type === 'electric' ? 'kWh' : 'gal'}</Text>
               </View>
+
+              {entry.fuelStation && (
+                <Text style={styles.compactStation}>📍 {entry.fuelStation}</Text>
+              )}
             </View>
 
-            {/* Details row */}
-            <View style={styles.details}>
-              <View style={styles.detailItem}>
-                <ThemedText style={[styles.detailLabel, { color: colors.icon }]}>
-                  {formatPriceLabel()}
-                </ThemedText>
-                <ThemedText style={[styles.detailValue, { color: colors.text }]}>
-                  ${entry.pricePerUnit.toFixed(2)}
-                </ThemedText>
-              </View>
-
-              <View style={styles.detailItem}>
-                <ThemedText style={[styles.detailLabel, { color: colors.icon }]}>
-                  Mileage
-                </ThemedText>
-                <ThemedText style={[styles.detailValue, { color: colors.text }]}>
-                  {entry.mileage.toLocaleString()}
-                </ThemedText>
-              </View>
-
-              <View style={styles.detailItem}>
-                <ThemedText style={[styles.detailLabel, { color: colors.icon }]}>
-                  {vehicle.type === 'electric' ? 'Efficiency' : 'MPG'}
-                </ThemedText>
-                <ThemedText style={[styles.detailValue, { color: colors.text }]}>
-                  {formatMPG()}
-                </ThemedText>
-              </View>
-            </View>
-
-            {/* Notes section */}
-            {entry.notes && (
-              <View style={styles.notesSection}>
-                <ThemedText style={[styles.notes, { color: colors.icon }]}>
-                  {entry.notes}
-                </ThemedText>
-              </View>
+            {/* Compact notes - only if very short */}
+            {entry.notes && entry.notes.length < 20 && (
+              <Text style={styles.compactNotes}>📝 {entry.notes}</Text>
             )}
-
-            {/* Swipe hint indicator */}
-            <View style={styles.swipeHint}>
-              <View style={[styles.hintLine, { backgroundColor: colors.border }]} />
-              <View style={[styles.hintLine, { backgroundColor: colors.border }]} />
-              <View style={[styles.hintLine, { backgroundColor: colors.border }]} />
-            </View>
           </TouchableOpacity>
         </Animated.View>
       </PanGestureHandler>
@@ -304,8 +254,8 @@ export function FuelEntryCard({ entry, vehicle, onEdit, onDelete, onPress }: Fue
 
 const styles = StyleSheet.create({
   container: {
-    marginHorizontal: 16,
-    marginVertical: 8,
+    marginHorizontal: 12,
+    marginVertical: 6,
     position: 'relative',
   },
   actionButtons: {
@@ -322,7 +272,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     flexDirection: 'row',
-    paddingHorizontal: 8,
+    paddingHorizontal: 6,
   },
   editButton: {
     borderTopRightRadius: 0,
@@ -334,103 +284,170 @@ const styles = StyleSheet.create({
   },
   actionButtonText: {
     color: 'white',
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '600',
-    marginLeft: 4,
+    marginLeft: 3,
   },
   card: {
-    borderRadius: 12,
+    borderRadius: 8,
     borderWidth: 1,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 2,
     zIndex: 2,
+    backgroundColor: '#fafafa', // Temporary indicator of new design
   },
   cardContent: {
-    padding: 16,
+    padding: 6,
   },
-  header: {
+  compactContainer: {
+    backgroundColor: '#f8f8f8',
+    borderRadius: 6,
+    padding: 6,
+  },
+  compactHeader: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 12,
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 3,
+  },
+  compactDate: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: '#333',
+    flex: 1,
+  },
+  compactVehicle: {
+    fontSize: 11,
+    fontWeight: '500',
+    color: '#555',
+    flex: 1,
+  },
+  compactAmount: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#007AFF',
+  },
+  compactSubHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 2,
+  },
+  compactQuantity: {
+    fontSize: 10,
+    color: '#666',
+    fontStyle: 'italic',
+  },
+  compactPrice: {
+    fontSize: 10,
+    color: '#666',
+  },
+  compactStation: {
+    fontSize: 9,
+    color: '#888',
+    fontStyle: 'italic',
+    marginTop: 2,
+  },
+  compactNotes: {
+    fontSize: 9,
+    color: '#888',
+    fontStyle: 'italic',
+    marginTop: 3,
   },
   vehicleInfo: {
     flex: 1,
-    marginRight: 12,
   },
   vehicleHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 4,
+    marginBottom: 3,
   },
   vehicleIcon: {
-    marginRight: 6,
+    marginRight: 4,
   },
   date: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '600',
   },
-  vehicleName: {
-    fontSize: 14,
-    marginBottom: 2,
-  },
-  fuelStation: {
-    fontSize: 12,
-    fontStyle: 'italic',
-  },
-  amountSection: {
-    alignItems: 'flex-end',
-  },
-  amount: {
-    fontSize: 18,
-    fontWeight: '700',
-  },
-  quantity: {
-    fontSize: 13,
-    marginTop: 2,
-  },
-  details: {
+  vehicleRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 8,
+    alignItems: 'center',
+    marginBottom: 3,
   },
-  detailItem: {
+  vehicleName: {
+    fontSize: 12,
+    fontWeight: '500',
+    flex: 1,
+  },
+  amount: {
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  detailsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  quantity: {
+    fontSize: 11,
+    fontStyle: 'italic',
+  },
+  detailText: {
+    fontSize: 11,
+    fontStyle: 'italic',
+  },
+  fuelStation: {
+    fontSize: 10,
+    fontStyle: 'italic',
+    marginTop: 2,
+  },
+  metricsSection: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 4,
+    paddingTop: 4,
+    borderTopWidth: 1,
+    borderTopColor: '#f0f0f0',
+  },
+  metricItem: {
     alignItems: 'center',
     flex: 1,
   },
-  detailLabel: {
-    fontSize: 11,
-    marginBottom: 2,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
+  metricLabel: {
+    fontSize: 9,
+    fontWeight: '600',
+    letterSpacing: 0.3,
+    marginBottom: 1,
   },
-  detailValue: {
-    fontSize: 14,
+  metricValue: {
+    fontSize: 12,
     fontWeight: '500',
   },
   notesSection: {
-    marginTop: 8,
-    paddingTop: 8,
+    marginTop: 4,
+    paddingTop: 4,
     borderTopWidth: 1,
     borderTopColor: '#f0f0f0',
   },
   notes: {
-    fontSize: 13,
+    fontSize: 10,
     fontStyle: 'italic',
-    lineHeight: 18,
+    lineHeight: 14,
   },
   swipeHint: {
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    marginTop: 8,
-    opacity: 0.5,
+    marginTop: 4,
+    opacity: 0.3,
   },
   hintLine: {
-    width: 20,
+    width: 12,
     height: 1,
-    marginHorizontal: 2,
+    marginHorizontal: 1,
   },
 });
