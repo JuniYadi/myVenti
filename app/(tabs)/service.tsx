@@ -6,15 +6,18 @@ import {
   TouchableOpacity,
   Alert,
   RefreshControl,
+  Modal,
 } from 'react-native';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Colors, Spacing, Typography } from '@/constants/theme';
 import { IconSymbol } from '@/components/ui/icon-symbol';
-import { ServiceRecord, Vehicle } from '@/types/data';
+import { ServiceRecord, Vehicle, ServiceFormData } from '@/types/data';
 import { ServiceService, VehicleService } from '@/services/index';
 import { ServiceForm } from '@/components/forms/ServiceForm';
+import { ServiceRecordCard } from '@/components/service/ServiceRecordCard';
+import { useFocusEffect } from 'expo-router';
 
 export default function ServiceScreen() {
   const colorScheme = useColorScheme() ?? 'light';
@@ -30,6 +33,13 @@ export default function ServiceScreen() {
   useEffect(() => {
     loadData();
   }, []);
+
+  // Refresh data when screen comes into focus
+  useFocusEffect(
+    React.useCallback(() => {
+      loadData();
+    }, [])
+  );
 
   const loadData = async () => {
     try {
@@ -105,21 +115,27 @@ export default function ServiceScreen() {
     );
   };
 
-  const handleServiceSubmit = async (formData: any) => {
+  const handleServiceSubmit = async (formData: ServiceFormData) => {
     try {
       if (editingRecord) {
-        // Note: Update functionality would need to be implemented in ServiceService
-        Alert.alert('Info', 'Edit functionality coming soon');
+        await ServiceService.update(editingRecord.id, formData);
+        Alert.alert('Success', 'Service record updated successfully!');
       } else {
         await ServiceService.create(formData);
-        Alert.alert('Success', 'Service record added successfully');
+        Alert.alert('Success', 'Service record added successfully!');
       }
       setModalVisible(false);
+      setEditingRecord(null);
       loadData();
     } catch (error) {
       console.error('Error saving service record:', error);
       throw error; // Let the form handle the error
     }
+  };
+
+  const handleFormCancel = () => {
+    setModalVisible(false);
+    setEditingRecord(null);
   };
 
   const getVehicleName = (vehicleId: string) => {
@@ -206,88 +222,17 @@ export default function ServiceScreen() {
             </ThemedText>
 
             {serviceRecords.map((record) => {
-              const vehicleName = getVehicleName(record.vehicleId);
-              const isRecordUpcoming = isUpcoming(record.date);
+              const vehicle = vehicles.find(v => v.id === record.vehicleId);
+              if (!vehicle) return null;
 
               return (
-                <TouchableOpacity
+                <ServiceRecordCard
                   key={record.id}
-                  style={[
-                    styles.serviceCard,
-                    {
-                      backgroundColor: colors.card,
-                      borderColor: isRecordUpcoming ? colors.serviceDue : colors.border,
-                      shadowColor: colors.shadow,
-                      borderWidth: isRecordUpcoming ? 2 : 1,
-                    },
-                  ]}
-                  onLongPress={() => handleDeleteRecord(record)}
-                  delayLongPress={500}
-                >
-                  <View style={styles.serviceHeader}>
-                    <View style={styles.serviceInfo}>
-                      <View style={styles.serviceTypeRow}>
-                        <ThemedText style={[styles.serviceType, { color: colors.text }]}>
-                          {record.type}
-                        </ThemedText>
-                        <View
-                          style={[
-                            styles.statusBadge,
-                            {
-                              backgroundColor: isRecordUpcoming ? colors.warning : colors.success,
-                            },
-                          ]}
-                        >
-                          <ThemedText style={styles.statusText}>
-                            {isRecordUpcoming ? 'Scheduled' : 'Completed'}
-                          </ThemedText>
-                        </View>
-                      </View>
-                      <ThemedText style={[styles.serviceVehicle, { color: colors.icon }]}>
-                        {vehicleName}
-                      </ThemedText>
-                      <ThemedText style={[styles.serviceDate, { color: colors.icon }]}>
-                        {formatDate(record.date)}
-                      </ThemedText>
-                    </View>
-                    <View style={styles.serviceCost}>
-                      <ThemedText style={[styles.cost, { color: colors.primary }]}>
-                        ${record.cost.toFixed(2)}
-                      </ThemedText>
-                    </View>
-                  </View>
-
-                  <View style={styles.serviceDetails}>
-                    <View style={styles.detailItem}>
-                      <IconSymbol name="speedometer" size={14} color={colors.icon} />
-                      <ThemedText style={[styles.detailValue, { color: colors.text }]}>
-                        {record.mileage.toLocaleString()} mi
-                      </ThemedText>
-                    </View>
-                    {record.description && (
-                      <View style={styles.detailItem}>
-                        <IconSymbol name="doc.text" size={14} color={colors.icon} />
-                        <ThemedText
-                          style={[styles.detailValue, { color: colors.text }]}
-                          numberOfLines={1}
-                        >
-                          {record.description}
-                        </ThemedText>
-                      </View>
-                    )}
-                    {record.notes && (
-                      <View style={styles.detailItem}>
-                        <IconSymbol name="note.text" size={14} color={colors.icon} />
-                        <ThemedText
-                          style={[styles.detailValue, { color: colors.text }]}
-                          numberOfLines={1}
-                        >
-                          Notes
-                        </ThemedText>
-                      </View>
-                    )}
-                  </View>
-                </TouchableOpacity>
+                  serviceRecord={record}
+                  vehicle={vehicle}
+                  onEdit={handleEditRecord}
+                  onDelete={handleDeleteRecord}
+                />
               );
             })}
           </View>
@@ -303,19 +248,22 @@ export default function ServiceScreen() {
         </TouchableOpacity>
       </ScrollView>
 
-      {/* TODO: Create dedicated service form screen */}
-      {/* <FormModal
+      {/* Service Form Modal */}
+      <Modal
         visible={modalVisible}
-        onClose={() => setModalVisible(false)}
-        title={editingRecord ? 'Edit Service Record' : 'Add Service Record'}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={handleFormCancel}
       >
-        <ServiceForm
-          serviceRecord={editingRecord}
-          onSubmit={handleServiceSubmit}
-          onCancel={() => setModalVisible(false)}
-          submitButtonText={editingRecord ? 'Update Record' : 'Add Record'}
-        />
-      </FormModal> */}
+        <View style={[styles.modalContainer, { backgroundColor: colors.background }]}>
+          <ServiceForm
+            serviceRecord={editingRecord}
+            onSubmit={handleServiceSubmit}
+            onCancel={handleFormCancel}
+            submitButtonText={editingRecord ? 'Update Service' : 'Add Service'}
+          />
+        </View>
+      </Modal>
     </ThemedView>
   );
 }
@@ -493,5 +441,8 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 22,
     maxWidth: 280,
+  },
+  modalContainer: {
+    flex: 1,
   },
 });
