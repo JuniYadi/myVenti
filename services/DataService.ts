@@ -196,6 +196,8 @@ export class FuelService {
         pricePerUnit: parseFloat(formData.pricePerUnit),
         mileage: parseInt(formData.mileage),
         mpg: mpg,
+        fuelStation: formData.fuelStation?.trim(),
+        notes: formData.notes?.trim(),
         createdAt: getCurrentTimestamp(),
         updatedAt: getCurrentTimestamp(),
       };
@@ -237,6 +239,65 @@ export class FuelService {
     }
   }
 
+  static async getById(id: string): Promise<FuelEntry | null> {
+    try {
+      const entries = await this.getAll();
+      return entries.find(entry => entry.id === id) || null;
+    } catch (error) {
+      handleStorageError(error, 'FuelService.getById');
+      return null;
+    }
+  }
+
+  static async update(id: string, formData: FuelFormData): Promise<FuelEntry | null> {
+    try {
+      const entries = await this.getAll();
+      const index = entries.findIndex(entry => entry.id === id);
+
+      if (index === -1) {
+        return null; // Entry not found
+      }
+
+      // Recalculate MPG for gas vehicles if mileage or quantity changed
+      let mpg: number | undefined = entries[index].mpg;
+      const vehicle = await VehicleService.getById(formData.vehicleId);
+
+      if (vehicle && vehicle.type !== 'electric') {
+        const previousEntries = entries.filter(e => e.vehicleId === formData.vehicleId && e.id !== id);
+        if (previousEntries.length > 0) {
+          const lastEntry = previousEntries[0];
+          const currentMileage = parseInt(formData.mileage);
+          const lastMileage = lastEntry.mileage;
+          const gallonsUsed = parseFloat(formData.quantity);
+
+          if (currentMileage > lastMileage && gallonsUsed > 0) {
+            mpg = (currentMileage - lastMileage) / gallonsUsed;
+          }
+        }
+      }
+
+      entries[index] = {
+        ...entries[index],
+        vehicleId: formData.vehicleId,
+        date: formData.date,
+        amount: parseFloat(formData.amount),
+        quantity: parseFloat(formData.quantity),
+        pricePerUnit: parseFloat(formData.pricePerUnit),
+        mileage: parseInt(formData.mileage),
+        mpg: mpg,
+        fuelStation: formData.fuelStation?.trim(),
+        notes: formData.notes?.trim(),
+        updatedAt: getCurrentTimestamp(),
+      };
+
+      await AsyncStorage.setItem(STORAGE_KEYS.FUEL_ENTRIES, JSON.stringify(entries));
+      return entries[index];
+    } catch (error) {
+      handleStorageError(error, 'FuelService.update');
+      throw error;
+    }
+  }
+
   static async getMonthlyTotal(): Promise<number> {
     try {
       const entries = await this.getAll();
@@ -252,6 +313,443 @@ export class FuelService {
     } catch (error) {
       handleStorageError(error, 'FuelService.getMonthlyTotal');
       return 0;
+    }
+  }
+
+  // ==================== ANALYTICS METHODS ====================
+
+  /**
+   * Get fuel entries within a date range
+   */
+  static async getByDateRange(startDate: Date, endDate: Date): Promise<FuelEntry[]> {
+    try {
+      const entries = await this.getAll();
+      return entries.filter(entry => {
+        const entryDate = new Date(entry.date);
+        return entryDate >= startDate && entryDate <= endDate;
+      });
+    } catch (error) {
+      handleStorageError(error, 'FuelService.getByDateRange');
+      return [];
+    }
+  }
+
+  /**
+   * Get analytics summary for a date range
+   */
+  static async getAnalyticsSummary(startDate: Date, endDate: Date): Promise<{
+    totalCost: number;
+    totalFuel: number;
+    averageMPG: number;
+    tripsCount: number;
+    averageCostPerTrip: number;
+    averageCostPerGallon: number;
+  }> {
+    try {
+      const entries = await this.getByDateRange(startDate, endDate);
+
+      if (entries.length === 0) {
+        return {
+          totalCost: 0,
+          totalFuel: 0,
+          averageMPG: 0,
+          tripsCount: 0,
+          averageCostPerTrip: 0,
+          averageCostPerGallon: 0,
+        };
+      }
+
+      const totalCost = entries.reduce((sum, entry) => sum + entry.amount, 0);
+      const totalFuel = entries.reduce((sum, entry) => sum + entry.quantity, 0);
+
+      // Calculate average MPG for gas vehicles only
+      const gasEntries = entries.filter(entry => entry.mpg && entry.mpg > 0);
+      const averageMPG = gasEntries.length > 0
+        ? gasEntries.reduce((sum, entry) => sum + entry.mpg!, 0) / gasEntries.length
+        : 0;
+
+      return {
+        totalCost,
+        totalFuel,
+        averageMPG: Math.round(averageMPG * 10) / 10,
+        tripsCount: entries.length,
+        averageCostPerTrip: totalCost / entries.length,
+        averageCostPerGallon: totalFuel > 0 ? totalCost / totalFuel : 0,
+      };
+    } catch (error) {
+      handleStorageError(error, 'FuelService.getAnalyticsSummary');
+      return {
+        totalCost: 0,
+        totalFuel: 0,
+        averageMPG: 0,
+        tripsCount: 0,
+        averageCostPerTrip: 0,
+        averageCostPerGallon: 0,
+      };
+    }
+  }
+
+  /**
+   * Get monthly trends for analytics charts
+   */
+  static async getMonthlyTrends(months: number = 12): Promise<Array<{
+    month: string;
+    cost: number;
+    fuel: number;
+    trips: number;
+    averageMPG: number;
+  }>> {
+    try {
+      const entries = await this.getAll();
+      const monthlyData = new Map<string, FuelEntry[]>();
+
+      // Group entries by month
+      entries.forEach(entry => {
+        const monthKey = entry.date.substring(0, 7); // YYYY-MM
+        if (!monthlyData.has(monthKey)) {
+          monthlyData.set(monthKey, []);
+        }
+        monthlyData.get(monthKey)!.push(entry);
+      });
+
+      // Get last N months
+      const trends = [];
+      const now = new Date();
+
+      for (let i = months - 1; i >= 0; i--) {
+        const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
+        const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+        const monthEntries = monthlyData.get(monthKey) || [];
+
+        const totalCost = monthEntries.reduce((sum, entry) => sum + entry.amount, 0);
+        const totalFuel = monthEntries.reduce((sum, entry) => sum + entry.quantity, 0);
+        const gasEntries = monthEntries.filter(entry => entry.mpg && entry.mpg > 0);
+        const averageMPG = gasEntries.length > 0
+          ? gasEntries.reduce((sum, entry) => sum + entry.mpg!, 0) / gasEntries.length
+          : 0;
+
+        trends.push({
+          month: monthKey,
+          cost: totalCost,
+          fuel: totalFuel,
+          trips: monthEntries.length,
+          averageMPG: Math.round(averageMPG * 10) / 10,
+        });
+      }
+
+      return trends;
+    } catch (error) {
+      handleStorageError(error, 'FuelService.getMonthlyTrends');
+      return [];
+    }
+  }
+
+  /**
+   * Get vehicle comparison data
+   */
+  static async getVehicleComparison(startDate: Date, endDate: Date): Promise<Array<{
+    vehicleId: string;
+    vehicleName: string;
+    totalCost: number;
+    totalFuel: number;
+    averageMPG: number;
+    tripsCount: number;
+    averageCostPerTrip: number;
+  }>> {
+    try {
+      const [entries, vehicles] = await Promise.all([
+        this.getByDateRange(startDate, endDate),
+        VehicleService.getAll(),
+      ]);
+
+      const vehicleData = new Map();
+
+      entries.forEach(entry => {
+        if (!vehicleData.has(entry.vehicleId)) {
+          vehicleData.set(entry.vehicleId, {
+            vehicleId: entry.vehicleId,
+            totalCost: 0,
+            totalFuel: 0,
+            mpgValues: [],
+            trips: 0,
+          });
+        }
+
+        const data = vehicleData.get(entry.vehicleId);
+        data.totalCost += entry.amount;
+        data.totalFuel += entry.quantity;
+        data.trips += 1;
+
+        if (entry.mpg && entry.mpg > 0) {
+          data.mpgValues.push(entry.mpg);
+        }
+      });
+
+      const comparison = [];
+
+      vehicleData.forEach((data, vehicleId) => {
+        const vehicle = vehicles.find(v => v.id === vehicleId);
+        if (vehicle) {
+          const averageMPG = data.mpgValues.length > 0
+            ? data.mpgValues.reduce((sum, mpg) => sum + mpg, 0) / data.mpgValues.length
+            : 0;
+
+          comparison.push({
+            vehicleId,
+            vehicleName: vehicle.name,
+            totalCost: data.totalCost,
+            totalFuel: data.totalFuel,
+            averageMPG: Math.round(averageMPG * 10) / 10,
+            tripsCount: data.trips,
+            averageCostPerTrip: data.totalCost / data.trips,
+          });
+        }
+      });
+
+      return comparison.sort((a, b) => b.totalCost - a.totalCost);
+    } catch (error) {
+      handleStorageError(error, 'FuelService.getVehicleComparison');
+      return [];
+    }
+  }
+
+  // ==================== ADVANCED FILTERING & SEARCH ====================
+
+  /**
+   * Search fuel entries by various criteria
+   */
+  static async search(filters: {
+    vehicleId?: string;
+    startDate?: Date;
+    endDate?: Date;
+    fuelStation?: string;
+    minPrice?: number;
+    maxPrice?: number;
+    minAmount?: number;
+    maxAmount?: number;
+    searchTerm?: string;
+  }): Promise<FuelEntry[]> {
+    try {
+      const entries = await this.getAll();
+
+      return entries.filter(entry => {
+        // Vehicle filter
+        if (filters.vehicleId && entry.vehicleId !== filters.vehicleId) {
+          return false;
+        }
+
+        // Date range filter
+        if (filters.startDate || filters.endDate) {
+          const entryDate = new Date(entry.date);
+          if (filters.startDate && entryDate < filters.startDate) {
+            return false;
+          }
+          if (filters.endDate && entryDate > filters.endDate) {
+            return false;
+          }
+        }
+
+        // Fuel station filter
+        if (filters.fuelStation) {
+          const searchTerm = filters.fuelStation.toLowerCase();
+          if (!entry.fuelStation?.toLowerCase().includes(searchTerm)) {
+            return false;
+          }
+        }
+
+        // Price range filter
+        if (filters.minPrice !== undefined && entry.pricePerUnit < filters.minPrice) {
+          return false;
+        }
+        if (filters.maxPrice !== undefined && entry.pricePerUnit > filters.maxPrice) {
+          return false;
+        }
+
+        // Amount range filter
+        if (filters.minAmount !== undefined && entry.amount < filters.minAmount) {
+          return false;
+        }
+        if (filters.maxAmount !== undefined && entry.amount > filters.maxAmount) {
+          return false;
+        }
+
+        // General search term (notes, fuel station)
+        if (filters.searchTerm) {
+          const searchTerm = filters.searchTerm.toLowerCase();
+          const matchesNotes = entry.notes?.toLowerCase().includes(searchTerm);
+          const matchesStation = entry.fuelStation?.toLowerCase().includes(searchTerm);
+
+          if (!matchesNotes && !matchesStation) {
+            return false;
+          }
+        }
+
+        return true;
+      });
+    } catch (error) {
+      handleStorageError(error, 'FuelService.search');
+      return [];
+    }
+  }
+
+  /**
+   * Get unique fuel stations from all entries
+   */
+  static async getUniqueFuelStations(): Promise<string[]> {
+    try {
+      const entries = await this.getAll();
+      const stations = new Set<string>();
+
+      entries.forEach(entry => {
+        if (entry.fuelStation && entry.fuelStation.trim()) {
+          stations.add(entry.fuelStation.trim());
+        }
+      });
+
+      return Array.from(stations).sort();
+    } catch (error) {
+      handleStorageError(error, 'FuelService.getUniqueFuelStations');
+      return [];
+    }
+  }
+
+  // ==================== BATCH OPERATIONS ====================
+
+  /**
+   * Create multiple fuel entries in a batch
+   */
+  static async createBatch(formDataList: FuelFormData[]): Promise<FuelEntry[]> {
+    try {
+      const entries = await this.getAll();
+      const newEntries: FuelEntry[] = [];
+
+      for (const formData of formDataList) {
+        // Calculate MPG for gas vehicles
+        let mpg: number | undefined;
+        const vehicle = await VehicleService.getById(formData.vehicleId);
+
+        if (vehicle && vehicle.type !== 'electric') {
+          const vehicleEntries = entries.filter(e => e.vehicleId === formData.vehicleId);
+          if (vehicleEntries.length > 0) {
+            const lastEntry = vehicleEntries.sort((a, b) =>
+              new Date(b.date).getTime() - new Date(a.date).getTime()
+            )[0];
+
+            const currentMileage = parseInt(formData.mileage);
+            const lastMileage = lastEntry.mileage;
+            const gallonsUsed = parseFloat(formData.quantity);
+
+            if (currentMileage > lastMileage && gallonsUsed > 0) {
+              mpg = (currentMileage - lastMileage) / gallonsUsed;
+            }
+          }
+        }
+
+        const newEntry: FuelEntry = {
+          id: generateId(),
+          vehicleId: formData.vehicleId,
+          date: formData.date,
+          amount: parseFloat(formData.amount),
+          quantity: parseFloat(formData.quantity),
+          pricePerUnit: parseFloat(formData.pricePerUnit),
+          mileage: parseInt(formData.mileage),
+          mpg: mpg,
+          fuelStation: formData.fuelStation?.trim(),
+          notes: formData.notes?.trim(),
+          createdAt: getCurrentTimestamp(),
+          updatedAt: getCurrentTimestamp(),
+        };
+
+        entries.push(newEntry);
+        newEntries.push(newEntry);
+      }
+
+      await AsyncStorage.setItem(STORAGE_KEYS.FUEL_ENTRIES, JSON.stringify(entries));
+      return newEntries;
+    } catch (error) {
+      handleStorageError(error, 'FuelService.createBatch');
+      throw error;
+    }
+  }
+
+  /**
+   * Delete multiple fuel entries in a batch
+   */
+  static async deleteBatch(entryIds: string[]): Promise<boolean> {
+    try {
+      const entries = await this.getAll();
+      const filteredEntries = entries.filter(entry => !entryIds.includes(entry.id));
+
+      if (filteredEntries.length === entries.length) {
+        return false; // No entries were deleted
+      }
+
+      await AsyncStorage.setItem(STORAGE_KEYS.FUEL_ENTRIES, JSON.stringify(filteredEntries));
+      return true;
+    } catch (error) {
+      handleStorageError(error, 'FuelService.deleteBatch');
+      throw error;
+    }
+  }
+
+  /**
+   * Update multiple fuel entries in a batch
+   */
+  static async updateBatch(updates: Array<{ id: string; formData: FuelFormData }>): Promise<FuelEntry[]> {
+    try {
+      const entries = await this.getAll();
+      const updatedEntries: FuelEntry[] = [];
+
+      for (const { id, formData } of updates) {
+        const index = entries.findIndex(entry => entry.id === id);
+        if (index === -1) continue;
+
+        // Recalculate MPG if needed
+        let mpg: number | undefined = entries[index].mpg;
+        const vehicle = await VehicleService.getById(formData.vehicleId);
+
+        if (vehicle && vehicle.type !== 'electric') {
+          const previousEntries = entries.filter(e =>
+            e.vehicleId === formData.vehicleId && e.id !== id
+          );
+
+          if (previousEntries.length > 0) {
+            const lastEntry = previousEntries.sort((a, b) =>
+              new Date(b.date).getTime() - new Date(a.date).getTime()
+            )[0];
+
+            const currentMileage = parseInt(formData.mileage);
+            const lastMileage = lastEntry.mileage;
+            const gallonsUsed = parseFloat(formData.quantity);
+
+            if (currentMileage > lastMileage && gallonsUsed > 0) {
+              mpg = (currentMileage - lastMileage) / gallonsUsed;
+            }
+          }
+        }
+
+        entries[index] = {
+          ...entries[index],
+          vehicleId: formData.vehicleId,
+          date: formData.date,
+          amount: parseFloat(formData.amount),
+          quantity: parseFloat(formData.quantity),
+          pricePerUnit: parseFloat(formData.pricePerUnit),
+          mileage: parseInt(formData.mileage),
+          mpg: mpg,
+          fuelStation: formData.fuelStation?.trim(),
+          notes: formData.notes?.trim(),
+          updatedAt: getCurrentTimestamp(),
+        };
+
+        updatedEntries.push(entries[index]);
+      }
+
+      await AsyncStorage.setItem(STORAGE_KEYS.FUEL_ENTRIES, JSON.stringify(entries));
+      return updatedEntries;
+    } catch (error) {
+      handleStorageError(error, 'FuelService.updateBatch');
+      throw error;
     }
   }
 }
