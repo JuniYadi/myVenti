@@ -133,6 +133,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.25,
     shadowRadius: 8,
     elevation: 12,
+    minHeight: 200,
   },
   header: {
     flexDirection: 'row',
@@ -165,6 +166,8 @@ const styles = StyleSheet.create({
     lineHeight: 24,
   },
   contentContainer: {
-    flex: 1,
+    padding: 0,
+    flexGrow: 1,
+    backgroundColor: '#f0f0f0', // Debug background to see if content area renders
   },
 });
