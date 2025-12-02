@@ -1,22 +1,22 @@
-import React, { useState, useEffect } from 'react';
-import {
-  StyleSheet,
-  ScrollView,
-  View,
-  TouchableOpacity,
-  RefreshControl,
-  Alert,
-} from 'react-native';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { useColorScheme } from '@/hooks/use-color-scheme';
-import { Colors, Spacing, Typography } from '@/constants/theme';
-import { IconSymbol } from '@/components/ui/icon-symbol';
-import { DashboardSummary, RecentActivity, VehicleFormData } from '@/types/data';
-import { VehicleService, DashboardService } from '@/services/index';
-import { useRouter } from 'expo-router';
 import { VehicleForm } from '@/components/forms/VehicleForm';
 import { FormModal } from '@/components/modals/FormModal';
+import { ThemedText } from '@/components/themed-text';
+import { ThemedView } from '@/components/themed-view';
+import { IconSymbol } from '@/components/ui/icon-symbol';
+import { Colors, Spacing, Typography } from '@/constants/theme';
+import { useColorScheme } from '@/hooks/use-color-scheme';
+import { DashboardService, VehicleService } from '@/services/index';
+import { DashboardSummary, RecentActivity, VehicleFormData } from '@/types/data';
+import { useRouter } from 'expo-router';
+import React, { useEffect, useState } from 'react';
+import {
+  Alert,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 
 export default function HomeScreen() {
   const colorScheme = useColorScheme() ?? 'light';
@@ -142,24 +142,12 @@ export default function HomeScreen() {
               { backgroundColor: colors.primary },
             ]}
           >
-            <IconSymbol name="car.fill" size={16} color="white" />
             <ThemedText style={styles.summaryValue}>
               {dashboardData.totalVehicles}
             </ThemedText>
             <ThemedText style={styles.summaryLabel}>
               Total Vehicles
             </ThemedText>
-            <View style={styles.activeIndicator}>
-              <View
-                style={[
-                  styles.activeDot,
-                  { backgroundColor: colors.vehicleOnline },
-                ]}
-              />
-              <ThemedText style={styles.activeText}>
-                {dashboardData.activeVehicles}
-              </ThemedText>
-            </View>
           </View>
 
           <View
@@ -168,7 +156,6 @@ export default function HomeScreen() {
               { backgroundColor: colors.warning },
             ]}
           >
-            <IconSymbol name="dollarsign.circle" size={16} color="white" />
             <ThemedText style={styles.summaryValue}>
               ${dashboardData.monthlyFuelCost.toFixed(0)}
             </ThemedText>
@@ -183,7 +170,6 @@ export default function HomeScreen() {
               { backgroundColor: colors.serviceDue },
             ]}
           >
-            <IconSymbol name="wrench.fill" size={16} color="white" />
             <ThemedText style={styles.summaryValue}>
               {dashboardData.upcomingServices}
             </ThemedText>
@@ -198,7 +184,6 @@ export default function HomeScreen() {
               { backgroundColor: colors.success },
             ]}
           >
-            <IconSymbol name="speedometer" size={16} color="white" />
             <ThemedText style={styles.summaryValue}>
               {dashboardData.totalMileage > 1000
                 ? `${(dashboardData.totalMileage / 1000).toFixed(1)}k`
