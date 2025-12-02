@@ -15,7 +15,7 @@ import { Colors, Spacing, Typography } from '@/constants/theme';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { ServiceRecord, Vehicle } from '@/types/data';
 import { ServiceService, VehicleService } from '@/services/index';
-import { ServiceRecordCard } from '@/components/service/ServiceRecordCard';
+import { ServiceListItem } from '@/components/service/ServiceListItem';
 import { useFocusEffect } from 'expo-router';
 
 export default function ServiceScreen() {
@@ -216,7 +216,7 @@ export default function ServiceScreen() {
               if (!vehicle) return null;
 
               return (
-                <ServiceRecordCard
+                <ServiceListItem
                   key={record.id}
                   serviceRecord={record}
                   vehicle={vehicle}
@@ -289,7 +289,7 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.md,
   },
   serviceList: {
-    gap: Spacing.md,
+    gap: Spacing.xs,
     marginBottom: Spacing.lg,
   },
   recordsHeader: {
