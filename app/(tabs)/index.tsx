@@ -5,15 +5,18 @@ import {
   View,
   TouchableOpacity,
   RefreshControl,
+  Alert,
 } from 'react-native';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Colors, Spacing, Typography } from '@/constants/theme';
 import { IconSymbol } from '@/components/ui/icon-symbol';
-import { DashboardSummary, RecentActivity } from '@/types/data';
+import { DashboardSummary, RecentActivity, VehicleFormData } from '@/types/data';
 import { VehicleService, FuelService, ServiceService, DashboardService } from '@/services/index';
 import { useRouter } from 'expo-router';
+import { VehicleForm } from '@/components/forms/VehicleForm';
+import { FormModal } from '@/components/modals/FormModal';
 
 export default function HomeScreen() {
   const colorScheme = useColorScheme() ?? 'light';
@@ -31,6 +34,7 @@ export default function HomeScreen() {
   const [recentActivity, setRecentActivity] = useState<RecentActivity[]>([]);
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [vehicleModalVisible, setVehicleModalVisible] = useState(false);
 
   useEffect(() => {
     loadDashboardData();
@@ -92,7 +96,25 @@ export default function HomeScreen() {
   ];
 
   const handleQuickAction = (route: string) => {
-    router.push(route as any);
+    if (route === '/vehicle') {
+      // Open vehicle form modal directly instead of navigating
+      setVehicleModalVisible(true);
+    } else {
+      router.push(route as any);
+    }
+  };
+
+  const handleVehicleSubmit = async (formData: VehicleFormData) => {
+    try {
+      await VehicleService.create(formData);
+      Alert.alert('Success', 'Vehicle added successfully');
+      setVehicleModalVisible(false);
+      // Refresh dashboard data to show new vehicle
+      loadDashboardData();
+    } catch (error) {
+      console.error('Error saving vehicle:', error);
+      Alert.alert('Error', 'Failed to save vehicle. Please try again.');
+    }
   };
 
   return (
@@ -115,78 +137,84 @@ export default function HomeScreen() {
           </ThemedText>
         </View>
 
-        {/* Summary Cards Grid */}
-        <View style={styles.summaryGrid}>
-          <View
-            style={[
-              styles.summaryCard,
-              { backgroundColor: colors.primary },
-            ]}
+        {/* Summary Cards - Horizontal Scroll */}
+        <View style={styles.section}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.summaryGrid}
           >
-            <IconSymbol name="car.fill" size={20} color="white" />
-            <ThemedText style={styles.summaryValue}>
-              {dashboardData.totalVehicles}
-            </ThemedText>
-            <ThemedText style={styles.summaryLabel}>
-              Total Vehicles
-            </ThemedText>
-            <View style={styles.activeIndicator}>
-              <View
-                style={[
-                  styles.activeDot,
-                  { backgroundColor: colors.vehicleOnline },
-                ]}
-              />
-              <ThemedText style={styles.activeText}>
-                {dashboardData.activeVehicles} active
+            <View
+              style={[
+                styles.summaryCard,
+                { backgroundColor: colors.primary },
+              ]}
+            >
+              <IconSymbol name="car.fill" size={16} color="white" />
+              <ThemedText style={styles.summaryValue}>
+                {dashboardData.totalVehicles}
+              </ThemedText>
+              <ThemedText style={styles.summaryLabel}>
+                Total Vehicles
+              </ThemedText>
+              <View style={styles.activeIndicator}>
+                <View
+                  style={[
+                    styles.activeDot,
+                    { backgroundColor: colors.vehicleOnline },
+                  ]}
+                />
+                <ThemedText style={styles.activeText}>
+                  {dashboardData.activeVehicles} active
+                </ThemedText>
+              </View>
+            </View>
+
+            <View
+              style={[
+                styles.summaryCard,
+                { backgroundColor: colors.warning },
+              ]}
+            >
+              <IconSymbol name="dollarsign.circle" size={16} color="white" />
+              <ThemedText style={styles.summaryValue}>
+                ${dashboardData.monthlyFuelCost.toFixed(0)}
+              </ThemedText>
+              <ThemedText style={styles.summaryLabel}>
+                Monthly Fuel Cost
               </ThemedText>
             </View>
-          </View>
 
-          <View
-            style={[
-              styles.summaryCard,
-              { backgroundColor: colors.warning },
-            ]}
-          >
-            <IconSymbol name="dollarsign.circle" size={20} color="white" />
-            <ThemedText style={styles.summaryValue}>
-              ${dashboardData.monthlyFuelCost.toFixed(0)}
-            </ThemedText>
-            <ThemedText style={styles.summaryLabel}>
-              Monthly Fuel Cost
-            </ThemedText>
-          </View>
+            <View
+              style={[
+                styles.summaryCard,
+                { backgroundColor: colors.serviceDue },
+              ]}
+            >
+              <IconSymbol name="wrench.fill" size={16} color="white" />
+              <ThemedText style={styles.summaryValue}>
+                {dashboardData.upcomingServices}
+              </ThemedText>
+              <ThemedText style={styles.summaryLabel}>
+                Services Due
+              </ThemedText>
+            </View>
 
-          <View
-            style={[
-              styles.summaryCard,
-              { backgroundColor: colors.serviceDue },
-            ]}
-          >
-            <IconSymbol name="wrench.fill" size={20} color="white" />
-            <ThemedText style={styles.summaryValue}>
-              {dashboardData.upcomingServices}
-            </ThemedText>
-            <ThemedText style={styles.summaryLabel}>
-              Services Due
-            </ThemedText>
-          </View>
-
-          <View
-            style={[
-              styles.summaryCard,
-              { backgroundColor: colors.success },
-            ]}
-          >
-            <IconSymbol name="speedometer" size={20} color="white" />
-            <ThemedText style={styles.summaryValue}>
-              {dashboardData.totalMileage.toLocaleString()}
-            </ThemedText>
-            <ThemedText style={styles.summaryLabel}>
-              Total Mileage
-            </ThemedText>
-          </View>
+            <View
+              style={[
+                styles.summaryCard,
+                { backgroundColor: colors.success },
+              ]}
+            >
+              <IconSymbol name="speedometer" size={16} color="white" />
+              <ThemedText style={styles.summaryValue}>
+                {dashboardData.totalMileage.toLocaleString()}
+              </ThemedText>
+              <ThemedText style={styles.summaryLabel}>
+                Total Mileage
+              </ThemedText>
+            </View>
+          </ScrollView>
         </View>
 
         {/* Quick Actions */}
@@ -194,11 +222,7 @@ export default function HomeScreen() {
           <ThemedText style={[styles.sectionTitle, { color: colors.text }]}>
             Quick Actions
           </ThemedText>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.quickActionsGrid}
-          >
+          <View style={styles.quickActionsGrid}>
             {quickActions.map((action) => (
               <TouchableOpacity
                 key={action.id}
@@ -231,7 +255,7 @@ export default function HomeScreen() {
                 </ThemedText>
               </TouchableOpacity>
             ))}
-          </ScrollView>
+          </View>
         </View>
 
         {/* Recent Activity */}
@@ -307,6 +331,19 @@ export default function HomeScreen() {
         {/* Bottom padding to account for navigation */}
         <View style={{ height: Spacing.navigation.tabBarHeight + Spacing.lg }} />
       </ScrollView>
+
+      {/* Vehicle Form Modal */}
+      <FormModal
+        visible={vehicleModalVisible}
+        onClose={() => setVehicleModalVisible(false)}
+        title="Add New Vehicle"
+      >
+        <VehicleForm
+          onSubmit={handleVehicleSubmit}
+          onCancel={() => setVehicleModalVisible(false)}
+          submitButtonText="Add Vehicle"
+        />
+      </FormModal>
     </ThemedView>
   );
 }
@@ -346,15 +383,15 @@ const styles = StyleSheet.create({
   },
   summaryGrid: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
     gap: Spacing.sm,
+    paddingHorizontal: 0,
     marginBottom: Spacing.lg,
   },
   summaryCard: {
-    width: '48%',
+    width: 140, // Fixed width for horizontal scrolling
     padding: Spacing.cardCompact.padding,
     borderRadius: Spacing.cardCompact.borderRadius,
-    minHeight: Spacing.cardCompact.minHeight,
+    minHeight: 90, // Reduced height for more compact layout
     shadowOffset: Spacing.cardCompact.shadowOffset,
     shadowOpacity: Spacing.cardCompact.shadowOpacity,
     shadowRadius: Spacing.cardCompact.shadowRadius,
@@ -393,10 +430,11 @@ const styles = StyleSheet.create({
   },
   quickActionsGrid: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: Spacing.sm,
   },
   quickActionCard: {
-    width: Spacing.quickActionCompact.minWidth, // Use theme constant for consistency
+    width: '48%', // 2x2 grid on larger screens
     padding: Spacing.quickActionCompact.padding,
     borderRadius: Spacing.quickActionCompact.borderRadius,
     borderWidth: 1,
