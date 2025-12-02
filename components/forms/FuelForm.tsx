@@ -44,6 +44,8 @@ export function FuelForm({
     quantity: fuelEntry?.quantity?.toString() || '',
     pricePerUnit: fuelEntry?.pricePerUnit?.toString() || '',
     mileage: fuelEntry?.mileage?.toString() || '',
+    fuelStation: fuelEntry?.fuelStation || '',
+    notes: fuelEntry?.notes || '',
   });
 
   const [loading, setLoading] = useState(false);
@@ -84,30 +86,69 @@ export function FuelForm({
 
     if (!formData.date) {
       newErrors.date = 'Date is required';
+    } else {
+      // Validate date is not in the future
+      const selectedDate = new Date(formData.date);
+      const today = new Date();
+      today.setHours(23, 59, 59, 999); // End of today
+      if (selectedDate > today) {
+        newErrors.date = 'Date cannot be in the future';
+      }
     }
 
-    if (!formData.amount.trim()) {
-      newErrors.amount = 'Total amount is required';
-    } else if (isNaN(parseFloat(formData.amount)) || parseFloat(formData.amount) <= 0) {
-      newErrors.amount = 'Amount must be greater than 0';
+    // Auto-calculate amount from quantity × price per unit
+    const calculatedAmount = calculateTotalAmount();
+    const amountValue = parseFloat(calculatedAmount);
+
+    if (amountValue <= 0) {
+      newErrors.quantity = 'Enter valid quantity and price to calculate total amount';
+      newErrors.pricePerUnit = 'Enter valid price and quantity to calculate total amount';
+    } else if (amountValue > 10000) {
+      newErrors.amount = 'Calculated total amount seems unusually high';
     }
 
     if (!formData.quantity.trim()) {
       newErrors.quantity = 'Quantity is required';
     } else if (isNaN(parseFloat(formData.quantity)) || parseFloat(formData.quantity) <= 0) {
       newErrors.quantity = 'Quantity must be greater than 0';
+    } else {
+      const quantity = parseFloat(formData.quantity);
+      const vehicleType = selectedVehicle?.type;
+      if (vehicleType === 'electric' && quantity > 500) {
+        newErrors.quantity = 'kWh amount seems unusually high (max 500)';
+      } else if ((vehicleType === 'gas' || vehicleType === 'hybrid') && quantity > 50) {
+        newErrors.quantity = 'Gallons amount seems unusually high (max 50)';
+      }
     }
 
     if (!formData.pricePerUnit.trim()) {
       newErrors.pricePerUnit = 'Price per unit is required';
     } else if (isNaN(parseFloat(formData.pricePerUnit)) || parseFloat(formData.pricePerUnit) <= 0) {
       newErrors.pricePerUnit = 'Price per unit must be greater than 0';
+    } else {
+      const price = parseFloat(formData.pricePerUnit);
+      const vehicleType = selectedVehicle?.type;
+      if (vehicleType === 'electric' && price > 2) {
+        newErrors.pricePerUnit = 'kWh price seems unusually high (max $2.00)';
+      } else if ((vehicleType === 'gas' || vehicleType === 'hybrid') && price > 10) {
+        newErrors.pricePerUnit = 'Gallon price seems unusually high (max $10.00)';
+      }
     }
 
     if (!formData.mileage.trim()) {
       newErrors.mileage = 'Mileage is required';
     } else if (isNaN(parseInt(formData.mileage)) || parseInt(formData.mileage) < 0) {
       newErrors.mileage = 'Mileage must be 0 or greater';
+    } else if (parseInt(formData.mileage) > 1000000) {
+      newErrors.mileage = 'Mileage seems unusually high';
+    }
+
+    if (formData.fuelStation && formData.fuelStation.length > 100) {
+      newErrors.fuelStation = 'Fuel station name is too long (max 100 characters)';
+    }
+
+    if (formData.notes && formData.notes.length > 500) {
+      newErrors.notes = 'Notes are too long (max 500 characters)';
     }
 
     setErrors(newErrors);
@@ -115,9 +156,7 @@ export function FuelForm({
   };
 
   const calculateTotalAmount = () => {
-    const quantity = parseFloat(formData.quantity) || 0;
-    const pricePerUnit = parseFloat(formData.pricePerUnit) || 0;
-    return (quantity * pricePerUnit).toFixed(2);
+    return calculateTotalAmountFromData(formData);
   };
 
   const handleSubmit = async () => {
@@ -127,28 +166,104 @@ export function FuelForm({
 
     setLoading(true);
     try {
-      // Update amount with calculated total if it differs
-      const calculatedAmount = calculateTotalAmount();
+      // Use the calculated amount from the form (already auto-calculated)
       const submissionData = {
         ...formData,
-        amount: parseFloat(calculatedAmount).toString(),
+        amount: parseFloat(formData.amount).toString(), // Ensure it's properly formatted
       };
 
       await onSubmit(submissionData);
     } catch (error) {
-      Alert.alert('Error', 'Failed to save fuel entry. Please try again.');
-      console.error('Fuel form submission error:', error);
+      Alert.alert('Error', `Failed to save fuel entry: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setLoading(false);
     }
   };
 
   const updateFormData = (field: keyof FuelFormData, value: string) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
-    // Clear error for this field when user starts typing
-    if (errors[field]) {
-      setErrors(prev => ({ ...prev, [field]: undefined }));
+    const updatedData = { ...formData, [field]: value };
+
+    // Auto-calculate amount when quantity or price changes
+    if (field === 'quantity' || field === 'pricePerUnit') {
+      const calculatedAmount = calculateTotalAmountFromData(updatedData);
+      updatedData.amount = calculatedAmount;
     }
+
+    setFormData(updatedData);
+
+    // Real-time validation for improved UX
+    const newErrors = { ...errors };
+
+    // Clear existing error for this field
+    delete newErrors[field];
+
+    // Real-time validation for specific fields
+    if (value.trim()) {
+      switch (field) {
+        case 'date':
+          const selectedDate = new Date(value);
+          const today = new Date();
+          today.setHours(23, 59, 59, 999);
+          if (selectedDate > today) {
+            newErrors.date = 'Date cannot be in the future';
+          }
+          break;
+
+        case 'quantity':
+          const quantity = parseFloat(value);
+          const vehicleType = selectedVehicle?.type;
+          if (isNaN(quantity) || quantity <= 0) {
+            newErrors.quantity = 'Quantity must be greater than 0';
+          } else if (vehicleType === 'electric' && quantity > 500) {
+            newErrors.quantity = 'kWh amount seems unusually high (max 500)';
+          } else if ((vehicleType === 'gas' || vehicleType === 'hybrid') && quantity > 50) {
+            newErrors.quantity = 'Gallons amount seems unusually high (max 50)';
+          }
+          break;
+
+        case 'pricePerUnit':
+          const price = parseFloat(value);
+          const vType = selectedVehicle?.type;
+          if (isNaN(price) || price <= 0) {
+            newErrors.pricePerUnit = 'Price per unit must be greater than 0';
+          } else if (vType === 'electric' && price > 2) {
+            newErrors.pricePerUnit = 'kWh price seems unusually high (max $2.00)';
+          } else if ((vType === 'gas' || vType === 'hybrid') && price > 10) {
+            newErrors.pricePerUnit = 'Gallon price seems unusually high (max $10.00)';
+          }
+          break;
+
+        case 'mileage':
+          const mileage = parseInt(value);
+          if (isNaN(mileage) || mileage < 0) {
+            newErrors.mileage = 'Mileage must be 0 or greater';
+          } else if (mileage > 1000000) {
+            newErrors.mileage = 'Mileage seems unusually high';
+          }
+          break;
+
+        case 'fuelStation':
+          if (value.length > 100) {
+            newErrors.fuelStation = 'Fuel station name is too long (max 100 characters)';
+          }
+          break;
+
+        case 'notes':
+          if (value.length > 500) {
+            newErrors.notes = 'Notes are too long (max 500 characters)';
+          }
+          break;
+      }
+    }
+
+    setErrors(newErrors);
+  };
+
+  // Helper function to calculate amount from form data
+  const calculateTotalAmountFromData = (data: FuelFormData) => {
+    const quantity = parseFloat(data.quantity) || 0;
+    const pricePerUnit = parseFloat(data.pricePerUnit) || 0;
+    return (quantity * pricePerUnit).toFixed(2);
   };
 
   const getQuantityLabel = () => {
@@ -321,29 +436,68 @@ export function FuelForm({
             <ThemedText style={styles.label}>Total Amount ($)</ThemedText>
             <View style={styles.calculatedAmountContainer}>
               <TextInput
-                style={[styles.input, styles.calculatedInput]}
+                style={[styles.input, styles.calculatedInput, styles.readonlyInput]}
                 placeholder="0.00"
                 value={calculateTotalAmount()}
-                onChangeText={(value) => updateFormData('amount', value)}
-                keyboardType="decimal-pad"
-                editable={!loading}
+                editable={false} // Read-only since it's calculated
               />
-              <TouchableOpacity
-                style={styles.calculateButton}
-                onPress={() => updateFormData('amount', calculateTotalAmount())}
-                disabled={loading}
-              >
-                <IconSymbol name="arrow.clockwise" size={16} color="#007AFF" />
-              </TouchableOpacity>
+              <View style={styles.calculateIconContainer}>
+                <IconSymbol name="calculator" size={16} color="#007AFF" />
+              </View>
             </View>
-            {selectedVehicle && (
-              <ThemedText style={styles.helperText}>
-                {selectedVehicle.type === 'electric'
-                  ? `Calculated: ${formData.quantity || 0} kWh × $${formData.pricePerUnit || '0'}`
-                  : `Calculated: ${formData.quantity || 0} gallons × $${formData.pricePerUnit || '0'}`
-                }
-              </ThemedText>
+            <ThemedText style={styles.helperText}>
+              Automatically calculated from quantity × price per unit
+              {selectedVehicle && selectedVehicle.type === 'electric'
+                ? ` (${formData.quantity || 0} kWh × $${formData.pricePerUnit || '0'})`
+                : ` (${formData.quantity || 0} gallons × $${formData.pricePerUnit || '0'})`
+              }
+            </ThemedText>
+          </View>
+
+          {/* Fuel Station */}
+          <View style={styles.fieldGroup}>
+            <ThemedText style={styles.label}>Fuel Station (Optional)</ThemedText>
+            <TextInput
+              style={[styles.input, errors.fuelStation && styles.inputError]}
+              placeholder="e.g., Shell, Chevron, BP"
+              value={formData.fuelStation}
+              onChangeText={(value) => updateFormData('fuelStation', value)}
+              editable={!loading}
+              maxLength={100}
+            />
+            {errors.fuelStation && (
+              <ThemedText style={styles.errorText}>{errors.fuelStation}</ThemedText>
             )}
+            <ThemedText style={styles.helperText}>
+              Enter the name of the fuel station or charging station
+            </ThemedText>
+          </View>
+
+          {/* Notes */}
+          <View style={styles.fieldGroup}>
+            <ThemedText style={styles.label}>Notes (Optional)</ThemedText>
+            <TextInput
+              style={[styles.input, styles.notesInput, errors.notes && styles.inputError]}
+              placeholder="e.g., Premium gasoline, road trip, maintenance visit"
+              value={formData.notes}
+              onChangeText={(value) => updateFormData('notes', value)}
+              editable={!loading}
+              maxLength={500}
+              multiline
+              numberOfLines={3}
+              textAlignVertical="top"
+            />
+            <View style={styles.characterCount}>
+              <ThemedText style={styles.helperText}>
+                {formData.notes.length}/500 characters
+              </ThemedText>
+            </View>
+            {errors.notes && (
+              <ThemedText style={styles.errorText}>{errors.notes}</ThemedText>
+            )}
+            <ThemedText style={styles.helperText}>
+              Add any additional notes about this fuel entry
+            </ThemedText>
           </View>
 
           {/* MPG Display for Gas Vehicles */}
@@ -460,12 +614,18 @@ const styles = StyleSheet.create({
   calculatedInput: {
     flex: 1,
   },
-  calculateButton: {
+  readonlyInput: {
+    backgroundColor: '#f8f8f8',
+    color: '#333',
+  },
+  calculateIconContainer: {
     padding: 12,
     backgroundColor: '#f2f2f7',
     borderRadius: 8,
     borderWidth: 1,
     borderColor: '#ddd',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   mpgText: {
     fontSize: 14,
@@ -509,5 +669,14 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: '#fff',
+  },
+  notesInput: {
+    height: 80,
+    textAlignVertical: 'top',
+  },
+  characterCount: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    marginTop: 4,
   },
 });
