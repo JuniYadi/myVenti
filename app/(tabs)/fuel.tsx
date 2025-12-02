@@ -12,34 +12,52 @@ import { ThemedView } from '@/components/themed-view';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Colors, Spacing, Typography } from '@/constants/theme';
 import { IconSymbol } from '@/components/ui/icon-symbol';
-import { FuelEntry, Vehicle, VehicleType } from '@/types/data';
-import { FuelService, VehicleService, DashboardService } from '@/services/index';
-import { FuelForm } from '@/components/forms/FuelForm';
+import { FuelEntry, Vehicle, FuelSearchFilter as FuelSearchFilterType } from '@/types/data';
+import { FuelService, VehicleService } from '@/services/index';
+import { FuelSearchFilter } from '@/components/fuel/FuelSearchFilter';
+import { FuelEntryCard } from '@/components/fuel/FuelEntryCard';
+import { useRouter, useFocusEffect } from 'expo-router';
 
 export default function FuelScreen() {
+  const router = useRouter();
   const colorScheme = useColorScheme() ?? 'light';
   const colors = Colors[colorScheme];
   const [fuelEntries, setFuelEntries] = useState<FuelEntry[]>([]);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
-  const [modalVisible, setModalVisible] = useState(false);
-  const [editingEntry, setEditingEntry] = useState<FuelEntry | null>(null);
   const [monthlyTotal, setMonthlyTotal] = useState(0);
   const [avgMPG, setAvgMPG] = useState<number | null>(null);
+  const [showFilters, setShowFilters] = useState(false);
+  const [filter, setFilter] = useState<FuelSearchFilterType>({
+    sortBy: 'date',
+    sortOrder: 'desc',
+  });
 
   useEffect(() => {
     loadData();
   }, []);
 
+  // Refresh data when screen comes into focus (after adding/editing entries)
+  useFocusEffect(
+    React.useCallback(() => {
+      loadData();
+    }, [])
+  );
+
   const loadData = async () => {
     try {
       setLoading(true);
+      console.log('Loading fuel data...');
       const [entries, vehicleList, monthlyCost] = await Promise.all([
         FuelService.getAll(),
         VehicleService.getAll(),
         FuelService.getMonthlyTotal(),
       ]);
+
+      console.log('Loaded entries:', entries.length);
+      console.log('Loaded vehicles:', vehicleList.length);
+      console.log('Monthly cost:', monthlyCost);
 
       setFuelEntries(entries);
       setVehicles(vehicleList);
@@ -57,6 +75,8 @@ export default function FuelScreen() {
       } else {
         setAvgMPG(null);
       }
+
+      console.log('Fuel data loaded successfully');
     } catch (error) {
       console.error('Error loading fuel data:', error);
       Alert.alert('Error', 'Failed to load fuel data');
@@ -72,13 +92,11 @@ export default function FuelScreen() {
   };
 
   const handleAddEntry = () => {
-    setEditingEntry(null);
-    setModalVisible(true);
+    router.push('/fuel/entry');
   };
 
   const handleEditEntry = (entry: FuelEntry) => {
-    setEditingEntry(entry);
-    setModalVisible(true);
+    router.push(`/fuel/entry?entryId=${entry.id}`);
   };
 
   const handleDeleteEntry = (entry: FuelEntry) => {
@@ -108,50 +126,70 @@ export default function FuelScreen() {
     );
   };
 
-  const handleFuelSubmit = async (formData: any) => {
-    try {
-      if (editingEntry) {
-        // Note: Update functionality would need to be implemented in FuelService
-        Alert.alert('Info', 'Edit functionality coming soon');
-      } else {
-        await FuelService.create(formData);
-        Alert.alert('Success', 'Fuel entry added successfully');
+  const getFilteredAndSortedEntries = () => {
+    let filteredEntries = [...fuelEntries];
+
+    // Apply vehicle filter
+    if (filter.vehicleId) {
+      filteredEntries = filteredEntries.filter(entry => entry.vehicleId === filter.vehicleId);
+    }
+
+    // Apply date range filter
+    if (filter.dateRange) {
+      const startDate = new Date(filter.dateRange.start);
+      const endDate = new Date(filter.dateRange.end);
+      endDate.setHours(23, 59, 59, 999); // End of day
+
+      filteredEntries = filteredEntries.filter(entry => {
+        const entryDate = new Date(entry.date);
+        return entryDate >= startDate && entryDate <= endDate;
+      });
+    }
+
+    // Apply price range filter
+    if (filter.priceRange) {
+      filteredEntries = filteredEntries.filter(entry =>
+        (!filter.priceRange.min || entry.pricePerUnit >= filter.priceRange.min) &&
+        (!filter.priceRange.max || entry.pricePerUnit <= filter.priceRange.max)
+      );
+    }
+
+    // Apply fuel station filter
+    if (filter.fuelStation) {
+      const searchTerm = filter.fuelStation.toLowerCase();
+      filteredEntries = filteredEntries.filter(entry =>
+        entry.fuelStation?.toLowerCase().includes(searchTerm)
+      );
+    }
+
+    // Apply sorting
+    filteredEntries.sort((a, b) => {
+      let comparison = 0;
+
+      switch (filter.sortBy) {
+        case 'date':
+          comparison = new Date(b.date).getTime() - new Date(a.date).getTime();
+          break;
+        case 'cost':
+          comparison = b.amount - a.amount;
+          break;
+        case 'mpg':
+          const aMPG = a.mpg || 0;
+          const bMPG = b.mpg || 0;
+          comparison = bMPG - aMPG;
+          break;
+        default:
+          comparison = 0;
       }
-      setModalVisible(false);
-      loadData();
-    } catch (error) {
-      console.error('Error saving fuel entry:', error);
-      throw error; // Let the form handle the error
-    }
+
+      return filter.sortOrder === 'asc' ? -comparison : comparison;
+    });
+
+    return filteredEntries;
   };
 
-  const getVehicleName = (vehicleId: string) => {
-    const vehicle = vehicles.find(v => v.id === vehicleId);
-    return vehicle ? vehicle.name : 'Unknown Vehicle';
-  };
-
-  const getVehicleType = (vehicleId: string) => {
-    const vehicle = vehicles.find(v => v.id === vehicleId);
-    return vehicle ? vehicle.type : 'gas';
-  };
-
-  const formatQuantity = (entry: FuelEntry) => {
-    const vehicleType = getVehicleType(entry.vehicleId);
-    const quantity = entry.quantity.toFixed(2);
-    return vehicleType === 'electric' ? `${quantity} kWh` : `${quantity} gal`;
-  };
-
-  const formatPriceLabel = (entry: FuelEntry) => {
-    const vehicleType = getVehicleType(entry.vehicleId);
-    return vehicleType === 'electric' ? 'Price/kWh' : 'Price/Gal';
-  };
-
-  const formatMPG = (entry: FuelEntry) => {
-    const vehicleType = getVehicleType(entry.vehicleId);
-    if (vehicleType === 'electric') {
-      return 'N/A (Electric)';
-    }
-    return entry.mpg ? entry.mpg.toFixed(1) : 'N/A';
+  const hasActiveFilters = () => {
+    return filter.vehicleId || filter.dateRange || filter.priceRange || filter.fuelStation;
   };
 
   return (
@@ -200,88 +238,82 @@ export default function FuelScreen() {
           </View>
         </View>
 
-        {fuelEntries.length === 0 && !loading ? (
+        {/* Search and Filter Controls */}
+        <View style={styles.filterSection}>
+          <View style={styles.filterHeader}>
+            <ThemedText style={[styles.sectionTitle, { color: colors.text }]}>
+              Fuel Entries
+            </ThemedText>
+            <TouchableOpacity
+              style={[styles.filterButton, { backgroundColor: colors.surface, borderColor: colors.border }]}
+              onPress={() => setShowFilters(!showFilters)}
+            >
+              <IconSymbol
+                name={showFilters ? "line.3.horizontal.decrease.circle.fill" : "line.3.horizontal.decrease.circle"}
+                size={20}
+                color={hasActiveFilters() ? colors.primary : colors.icon}
+              />
+              <ThemedText style={[styles.filterButtonText, { color: hasActiveFilters() ? colors.primary : colors.text }]}>
+                Filter
+                {hasActiveFilters() && ` (${getFilteredAndSortedEntries().length})`}
+              </ThemedText>
+            </TouchableOpacity>
+          </View>
+
+          {showFilters && (
+            <FuelSearchFilter
+              filter={filter}
+              onFilterChange={setFilter}
+              vehicles={vehicles}
+            />
+          )}
+        </View>
+
+        {getFilteredAndSortedEntries().length === 0 && !loading ? (
           <View style={styles.emptyState}>
             <IconSymbol
-              name="fuelpump.fill"
+              name={hasActiveFilters() ? "magnifyingglass" : "fuelpump.fill"}
               size={64}
               color={colors.icon}
               style={styles.emptyIcon}
             />
             <ThemedText style={[styles.emptyTitle, { color: colors.text }]}>
-              No Fuel Entries Yet
+              {hasActiveFilters() ? 'No Entries Found' : 'No Fuel Entries Yet'}
             </ThemedText>
             <ThemedText style={[styles.emptySubtitle, { color: colors.icon }]}>
-              Add your first fuel entry to start tracking consumption and expenses
+              {hasActiveFilters()
+                ? 'Try adjusting your search filters or add new fuel entries'
+                : 'Add your first fuel entry to start tracking consumption and expenses'
+              }
             </ThemedText>
+            {hasActiveFilters() && (
+              <TouchableOpacity
+                style={[styles.clearFiltersButton, { backgroundColor: colors.surface, borderColor: colors.border }]}
+                onPress={() => setFilter({ sortBy: 'date', sortOrder: 'desc' })}
+              >
+                <IconSymbol name="xmark.circle" size={16} color={colors.text} />
+                <ThemedText style={[styles.clearFiltersText, { color: colors.text }]}>
+                  Clear Filters
+                </ThemedText>
+              </TouchableOpacity>
+            )}
           </View>
         ) : (
           <View style={styles.fuelList}>
-            <ThemedText style={[styles.sectionTitle, { color: colors.text }]}>
-              Recent Fill-ups
-            </ThemedText>
+            {getFilteredAndSortedEntries().map((entry) => {
+              const vehicle = vehicles.find(v => v.id === entry.vehicleId);
+              if (!vehicle) return null;
 
-            {fuelEntries.map((entry) => (
-              <TouchableOpacity
-                key={entry.id}
-                style={[
-                  styles.fuelCard,
-                  {
-                    backgroundColor: colors.card,
-                    borderColor: colors.border,
-                    shadowColor: colors.shadow,
-                  },
-                ]}
-                onLongPress={() => handleDeleteEntry(entry)}
-                delayLongPress={500}
-              >
-                <View style={styles.fuelHeader}>
-                  <View style={styles.fuelInfo}>
-                    <ThemedText style={[styles.fuelDate, { color: colors.text }]}>
-                      {entry.date}
-                    </ThemedText>
-                    <ThemedText style={[styles.fuelVehicle, { color: colors.icon }]}>
-                      {getVehicleName(entry.vehicleId)}
-                    </ThemedText>
-                  </View>
-                  <View style={styles.fuelAmount}>
-                    <ThemedText style={[styles.amount, { color: colors.primary }]}>
-                      ${entry.amount.toFixed(2)}
-                    </ThemedText>
-                    <ThemedText style={[styles.gallons, { color: colors.icon }]}>
-                      {formatQuantity(entry)}
-                    </ThemedText>
-                  </View>
-                </View>
-
-                <View style={styles.fuelDetails}>
-                  <View style={styles.detailItem}>
-                    <ThemedText style={[styles.detailLabel, { color: colors.icon }]}>
-                      {formatPriceLabel(entry)}
-                    </ThemedText>
-                    <ThemedText style={[styles.detailValue, { color: colors.text }]}>
-                      ${entry.pricePerUnit.toFixed(2)}
-                    </ThemedText>
-                  </View>
-                  <View style={styles.detailItem}>
-                    <ThemedText style={[styles.detailLabel, { color: colors.icon }]}>
-                      Mileage
-                    </ThemedText>
-                    <ThemedText style={[styles.detailValue, { color: colors.text }]}>
-                      {entry.mileage.toLocaleString()}
-                    </ThemedText>
-                  </View>
-                  <View style={styles.detailItem}>
-                    <ThemedText style={[styles.detailLabel, { color: colors.icon }]}>
-                      MPG
-                    </ThemedText>
-                    <ThemedText style={[styles.detailValue, { color: colors.text }]}>
-                      {formatMPG(entry)}
-                    </ThemedText>
-                  </View>
-                </View>
-              </TouchableOpacity>
-            ))}
+              return (
+                <FuelEntryCard
+                  key={entry.id}
+                  entry={entry}
+                  vehicle={vehicle}
+                  onEdit={handleEditEntry}
+                  onDelete={handleDeleteEntry}
+                />
+              );
+            })}
           </View>
         )}
 
@@ -294,20 +326,6 @@ export default function FuelScreen() {
           <ThemedText style={styles.addButtonText}>Add Fuel Entry</ThemedText>
         </TouchableOpacity>
       </ScrollView>
-
-      {/* TODO: Create dedicated fuel form screen */}
-      {/* <FormModal
-        visible={modalVisible}
-        onClose={() => setModalVisible(false)}
-        title={editingEntry ? 'Edit Fuel Entry' : 'Add Fuel Entry'}
-      >
-        <FuelForm
-          fuelEntry={editingEntry}
-          onSubmit={handleFuelSubmit}
-          onCancel={() => setModalVisible(false)}
-          submitButtonText={editingEntry ? 'Update Entry' : 'Add Entry'}
-        />
-      </FormModal> */}
     </ThemedView>
   );
 }
@@ -369,7 +387,7 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.md,
   },
   fuelList: {
-    gap: Spacing.md,
+    gap: 6,
     marginBottom: Spacing.lg,
   },
   fuelCard: {
@@ -468,5 +486,41 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 22,
     maxWidth: 280,
+  },
+  filterSection: {
+    marginBottom: Spacing.md,
+  },
+  filterHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: Spacing.sm,
+  },
+  filterButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+    borderRadius: Spacing.card.borderRadius,
+    borderWidth: 1,
+    gap: Spacing.xs,
+  },
+  filterButtonText: {
+    fontSize: Typography.sizes.caption,
+    fontWeight: Typography.weights.medium,
+  },
+  clearFiltersButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+    borderRadius: Spacing.card.borderRadius,
+    borderWidth: 1,
+    gap: Spacing.xs,
+    marginTop: Spacing.md,
+  },
+  clearFiltersText: {
+    fontSize: Typography.sizes.caption,
+    fontWeight: Typography.weights.medium,
   },
 });
