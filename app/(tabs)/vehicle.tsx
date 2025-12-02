@@ -7,6 +7,7 @@ import {
   Alert,
   RefreshControl,
 } from 'react-native';
+import { useRouter } from 'expo-router';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { useColorScheme } from '@/hooks/use-color-scheme';
@@ -14,17 +15,14 @@ import { Colors, Spacing, Typography } from '@/constants/theme';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Vehicle, VehicleType } from '@/types/data';
 import { VehicleService } from '@/services/index';
-import { VehicleForm } from '@/components/forms/VehicleForm';
-import { FormModal } from '@/components/modals/FormModal';
 
 export default function VehicleScreen() {
+  const router = useRouter();
   const colorScheme = useColorScheme() ?? 'light';
   const colors = Colors[colorScheme];
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
-  const [modalVisible, setModalVisible] = useState(false);
-  const [editingVehicle, setEditingVehicle] = useState<Vehicle | null>(null);
 
   useEffect(() => {
     loadVehicles();
@@ -50,13 +48,11 @@ export default function VehicleScreen() {
   };
 
   const handleAddVehicle = () => {
-    setEditingVehicle(null);
-    setModalVisible(true);
+    router.push('/vehicle-form');
   };
 
   const handleEditVehicle = (vehicle: Vehicle) => {
-    setEditingVehicle(vehicle);
-    setModalVisible(true);
+    router.push(`/vehicle-form?vehicleId=${vehicle.id}`);
   };
 
   const handleDeleteVehicle = (vehicle: Vehicle) => {
@@ -83,23 +79,7 @@ export default function VehicleScreen() {
     );
   };
 
-  const handleVehicleSubmit = async (formData: any) => {
-    try {
-      if (editingVehicle) {
-        await VehicleService.update(editingVehicle.id, formData);
-        Alert.alert('Success', 'Vehicle updated successfully');
-      } else {
-        await VehicleService.create(formData);
-        Alert.alert('Success', 'Vehicle added successfully');
-      }
-      setModalVisible(false);
-      loadVehicles();
-    } catch (error) {
-      console.error('Error saving vehicle:', error);
-      throw error; // Let the form handle the error
-    }
-  };
-
+  
   const getVehicleIcon = (type: VehicleType) => {
     switch (type) {
       case 'electric':
@@ -241,20 +221,6 @@ export default function VehicleScreen() {
           <ThemedText style={styles.addButtonText}>Add Vehicle</ThemedText>
         </TouchableOpacity>
       </ScrollView>
-
-      {/* Vehicle Form Modal */}
-      <FormModal
-        visible={modalVisible}
-        onClose={() => setModalVisible(false)}
-        title={editingVehicle ? 'Edit Vehicle' : 'Add New Vehicle'}
-      >
-        <VehicleForm
-          vehicle={editingVehicle}
-          onSubmit={handleVehicleSubmit}
-          onCancel={() => setModalVisible(false)}
-          submitButtonText={editingVehicle ? 'Update Vehicle' : 'Add Vehicle'}
-        />
-      </FormModal>
     </ThemedView>
   );
 }
