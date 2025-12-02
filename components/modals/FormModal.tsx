@@ -39,7 +39,7 @@ export function FormModal({
   showCloseButton = true,
 }: FormModalProps) {
   const colorScheme = useColorScheme() ?? 'light';
-  const slideAnim = React.useRef(new Animated.Value(SCREEN_HEIGHT)).current;
+  const slideAnim = React.useRef(new Animated.Value(100)).current;
   const overlayAnim = React.useRef(new Animated.Value(0)).current;
 
   React.useEffect(() => {
@@ -78,7 +78,7 @@ export function FormModal({
     // Animate out first, then call onClose
     Animated.parallel([
       Animated.timing(slideAnim, {
-        toValue: SCREEN_HEIGHT,
+        toValue: 100,
         duration: 250,
         useNativeDriver: true,
       }),
@@ -130,6 +130,7 @@ export function FormModal({
             styles.modalContainer,
             {
               transform: [{ translateY: slideAnim }],
+              opacity: overlayAnim,
               maxWidth,
             },
           ]}
@@ -163,7 +164,7 @@ export function FormModal({
 const styles = StyleSheet.create({
   overlay: {
     ...StyleSheet.absoluteFillObject,
-    zIndex: 1,
+    zIndex: 1000,
   },
   overlayTouchable: {
     flex: 1,
@@ -176,7 +177,7 @@ const styles = StyleSheet.create({
     width: '100%',
     maxHeight: SCREEN_HEIGHT * 0.9,
     marginHorizontal: 20,
-    zIndex: 2,
+    zIndex: 1001,
   },
   modalContent: {
     flex: 1,

@@ -134,84 +134,81 @@ export default function HomeScreen() {
           </ThemedText>
         </View>
 
-        {/* Summary Cards - Horizontal Scroll */}
-        <View style={styles.section}>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.summaryGrid}
+        {/* Summary Cards - Compact Grid */}
+        <View style={styles.summaryGrid}>
+          <View
+            style={[
+              styles.summaryCard,
+              { backgroundColor: colors.primary },
+            ]}
           >
-            <View
-              style={[
-                styles.summaryCard,
-                { backgroundColor: colors.primary },
-              ]}
-            >
-              <IconSymbol name="car.fill" size={16} color="white" />
-              <ThemedText style={styles.summaryValue}>
-                {dashboardData.totalVehicles}
+            <IconSymbol name="car.fill" size={16} color="white" />
+            <ThemedText style={styles.summaryValue}>
+              {dashboardData.totalVehicles}
+            </ThemedText>
+            <ThemedText style={styles.summaryLabel}>
+              Total Vehicles
+            </ThemedText>
+            <View style={styles.activeIndicator}>
+              <View
+                style={[
+                  styles.activeDot,
+                  { backgroundColor: colors.vehicleOnline },
+                ]}
+              />
+              <ThemedText style={styles.activeText}>
+                {dashboardData.activeVehicles}
               </ThemedText>
-              <ThemedText style={styles.summaryLabel}>
-                Total Vehicles
-              </ThemedText>
-              <View style={styles.activeIndicator}>
-                <View
-                  style={[
-                    styles.activeDot,
-                    { backgroundColor: colors.vehicleOnline },
-                  ]}
-                />
-                <ThemedText style={styles.activeText}>
-                  {dashboardData.activeVehicles} active
-                </ThemedText>
-              </View>
             </View>
+          </View>
 
-            <View
-              style={[
-                styles.summaryCard,
-                { backgroundColor: colors.warning },
-              ]}
-            >
-              <IconSymbol name="dollarsign.circle" size={16} color="white" />
-              <ThemedText style={styles.summaryValue}>
-                ${dashboardData.monthlyFuelCost.toFixed(0)}
-              </ThemedText>
-              <ThemedText style={styles.summaryLabel}>
-                Monthly Fuel Cost
-              </ThemedText>
-            </View>
+          <View
+            style={[
+              styles.summaryCard,
+              { backgroundColor: colors.warning },
+            ]}
+          >
+            <IconSymbol name="dollarsign.circle" size={16} color="white" />
+            <ThemedText style={styles.summaryValue}>
+              ${dashboardData.monthlyFuelCost.toFixed(0)}
+            </ThemedText>
+            <ThemedText style={styles.summaryLabel}>
+              Fuel Cost
+            </ThemedText>
+          </View>
 
-            <View
-              style={[
-                styles.summaryCard,
-                { backgroundColor: colors.serviceDue },
-              ]}
-            >
-              <IconSymbol name="wrench.fill" size={16} color="white" />
-              <ThemedText style={styles.summaryValue}>
-                {dashboardData.upcomingServices}
-              </ThemedText>
-              <ThemedText style={styles.summaryLabel}>
-                Services Due
-              </ThemedText>
-            </View>
+          <View
+            style={[
+              styles.summaryCard,
+              { backgroundColor: colors.serviceDue },
+            ]}
+          >
+            <IconSymbol name="wrench.fill" size={16} color="white" />
+            <ThemedText style={styles.summaryValue}>
+              {dashboardData.upcomingServices}
+            </ThemedText>
+            <ThemedText style={styles.summaryLabel}>
+              Service Due
+            </ThemedText>
+          </View>
 
-            <View
-              style={[
-                styles.summaryCard,
-                { backgroundColor: colors.success },
-              ]}
-            >
-              <IconSymbol name="speedometer" size={16} color="white" />
-              <ThemedText style={styles.summaryValue}>
-                {dashboardData.totalMileage.toLocaleString()}
-              </ThemedText>
-              <ThemedText style={styles.summaryLabel}>
-                Total Mileage
-              </ThemedText>
-            </View>
-          </ScrollView>
+          <View
+            style={[
+              styles.summaryCard,
+              { backgroundColor: colors.success },
+            ]}
+          >
+            <IconSymbol name="speedometer" size={16} color="white" />
+            <ThemedText style={styles.summaryValue}>
+              {dashboardData.totalMileage > 1000
+                ? `${(dashboardData.totalMileage / 1000).toFixed(1)}k`
+                : dashboardData.totalMileage.toString()
+              }
+            </ThemedText>
+            <ThemedText style={styles.summaryLabel}>
+              Mileage
+            </ThemedText>
+          </View>
         </View>
 
         {/* Quick Actions */}
@@ -380,49 +377,49 @@ const styles = StyleSheet.create({
   },
   summaryGrid: {
     flexDirection: 'row',
-    gap: Spacing.sm,
-    paddingHorizontal: 0,
-    marginBottom: Spacing.lg,
+    flexWrap: 'wrap',
+    gap: Spacing.xs,
+    marginBottom: Spacing.md,
   },
   summaryCard: {
-    width: 140, // Fixed width for horizontal scrolling
-    padding: Spacing.cardCompact.padding,
-    borderRadius: Spacing.cardCompact.borderRadius,
-    minHeight: 90, // Reduced height for more compact layout
-    shadowOffset: Spacing.cardCompact.shadowOffset,
-    shadowOpacity: Spacing.cardCompact.shadowOpacity,
-    shadowRadius: Spacing.cardCompact.shadowRadius,
-    elevation: 3,
+    width: '48%', // 2x2 grid layout
+    padding: Spacing.sm,
+    borderRadius: 8,
+    minHeight: 80, // More compact height
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 2,
+    elevation: 2,
     alignItems: 'center',
     justifyContent: 'center',
   },
   summaryValue: {
     color: 'white',
-    fontSize: Typography.sizes.lg, // Slightly smaller for compact layout
+    fontSize: 18, // Smaller for compact layout
     fontWeight: Typography.weights.bold,
-    marginVertical: Spacing.xs / 4, // Reduced spacing for compact layout
+    marginVertical: 1,
   },
   summaryLabel: {
     color: 'white',
     fontSize: Typography.sizes.caption,
     fontWeight: Typography.weights.medium,
     textAlign: 'center',
-    marginTop: 2, // Small margin to separate from value
+    marginTop: 1,
   },
   activeIndicator: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: Spacing.sm,
-    gap: Spacing.xs,
+    marginTop: 2,
+    gap: 2,
   },
   activeDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
+    width: 4,
+    height: 4,
+    borderRadius: 2,
   },
   activeText: {
     color: 'white',
-    fontSize: Typography.sizes.small,
+    fontSize: 10,
     fontWeight: Typography.weights.normal,
   },
   quickActionsGrid: {
