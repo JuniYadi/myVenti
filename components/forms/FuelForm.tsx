@@ -19,6 +19,7 @@ import { ThemedView } from '@/components/themed-view';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { FuelEntry, FuelFormData, Vehicle, VehicleType } from '@/types/data';
 import { VehicleService } from '@/services/index';
+import { useRegion, formatCurrency, convertVolume, convertDistance } from '@/hooks/use-region';
 
 interface FuelFormProps {
   fuelEntry?: FuelEntry | null;
@@ -35,6 +36,7 @@ export function FuelForm({
   onCancel,
   submitButtonText = 'Add Fuel Entry',
 }: FuelFormProps) {
+  const { regionConfig, isLoading: regionLoading } = useRegion();
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null);
   const [formData, setFormData] = useState<FuelFormData>({
@@ -103,8 +105,8 @@ export function FuelForm({
     if (amountValue <= 0) {
       newErrors.quantity = 'Enter valid quantity and price to calculate total amount';
       newErrors.pricePerUnit = 'Enter valid price and quantity to calculate total amount';
-    } else if (amountValue > 10000) {
-      newErrors.amount = 'Calculated total amount seems unusually high';
+    } else if (amountValue > (regionConfig.currency.code === 'IDR' ? 1000000 : 10000)) {
+      newErrors.amount = `Calculated total amount seems unusually high (max ${formatCurrency(regionConfig.currency.code === 'IDR' ? 1000000 : 10000, regionConfig)})`;
     }
 
     if (!formData.quantity.trim()) {
@@ -116,8 +118,9 @@ export function FuelForm({
       const vehicleType = selectedVehicle?.type;
       if (vehicleType === 'electric' && quantity > 500) {
         newErrors.quantity = 'kWh amount seems unusually high (max 500)';
-      } else if ((vehicleType === 'gas' || vehicleType === 'hybrid') && quantity > 50) {
-        newErrors.quantity = 'Gallons amount seems unusually high (max 50)';
+      } else if ((vehicleType === 'gas' || vehicleType === 'hybrid')) {
+        const maxQuantity = regionConfig.volume.unit === 'liters' ? 150 : 50;
+        newErrors.quantity = `${regionConfig.volume.label} amount seems unusually high (max ${maxQuantity} ${regionConfig.volume.abbreviation})`;
       }
     }
 
@@ -128,19 +131,21 @@ export function FuelForm({
     } else {
       const price = parseFloat(formData.pricePerUnit);
       const vehicleType = selectedVehicle?.type;
-      if (vehicleType === 'electric' && price > 2) {
-        newErrors.pricePerUnit = 'kWh price seems unusually high (max $2.00)';
-      } else if ((vehicleType === 'gas' || vehicleType === 'hybrid') && price > 10) {
-        newErrors.pricePerUnit = 'Gallon price seems unusually high (max $10.00)';
+      if (vehicleType === 'electric') {
+        const maxPrice = regionConfig.currency.code === 'IDR' ? 5000 : 2;
+        newErrors.pricePerUnit = `kWh price seems unusually high (max ${formatCurrency(maxPrice, regionConfig)})`;
+      } else if ((vehicleType === 'gas' || vehicleType === 'hybrid')) {
+        const maxPrice = regionConfig.currency.code === 'IDR' ? 25000 : 10;
+        newErrors.pricePerUnit = `${regionConfig.volume.label} price seems unusually high (max ${formatCurrency(maxPrice, regionConfig)})`;
       }
     }
 
     if (!formData.mileage.trim()) {
-      newErrors.mileage = 'Mileage is required';
+      newErrors.mileage = 'Odometer reading is required';
     } else if (isNaN(parseInt(formData.mileage)) || parseInt(formData.mileage) < 0) {
-      newErrors.mileage = 'Mileage must be 0 or greater';
-    } else if (parseInt(formData.mileage) > 1000000) {
-      newErrors.mileage = 'Mileage seems unusually high';
+      newErrors.mileage = 'Odometer reading must be 0 or greater';
+    } else if (parseInt(formData.mileage) > (regionConfig.distance.unit === 'kilometers' ? 1600000 : 1000000)) {
+      newErrors.mileage = 'Odometer reading seems unusually high';
     }
 
     if (formData.fuelStation && formData.fuelStation.length > 100) {
@@ -216,8 +221,9 @@ export function FuelForm({
             newErrors.quantity = 'Quantity must be greater than 0';
           } else if (vehicleType === 'electric' && quantity > 500) {
             newErrors.quantity = 'kWh amount seems unusually high (max 500)';
-          } else if ((vehicleType === 'gas' || vehicleType === 'hybrid') && quantity > 50) {
-            newErrors.quantity = 'Gallons amount seems unusually high (max 50)';
+          } else if ((vehicleType === 'gas' || vehicleType === 'hybrid')) {
+            const maxQuantity = regionConfig.volume.unit === 'liters' ? 150 : 50;
+            newErrors.quantity = `${regionConfig.volume.label} amount seems unusually high (max ${maxQuantity} ${regionConfig.volume.abbreviation})`;
           }
           break;
 
@@ -226,10 +232,12 @@ export function FuelForm({
           const vType = selectedVehicle?.type;
           if (isNaN(price) || price <= 0) {
             newErrors.pricePerUnit = 'Price per unit must be greater than 0';
-          } else if (vType === 'electric' && price > 2) {
-            newErrors.pricePerUnit = 'kWh price seems unusually high (max $2.00)';
-          } else if ((vType === 'gas' || vType === 'hybrid') && price > 10) {
-            newErrors.pricePerUnit = 'Gallon price seems unusually high (max $10.00)';
+          } else if (vType === 'electric') {
+            const maxPrice = regionConfig.currency.code === 'IDR' ? 5000 : 2;
+            newErrors.pricePerUnit = `kWh price seems unusually high (max ${formatCurrency(maxPrice, regionConfig)})`;
+          } else if ((vType === 'gas' || vType === 'hybrid')) {
+            const maxPrice = regionConfig.currency.code === 'IDR' ? 25000 : 10;
+            newErrors.pricePerUnit = `${regionConfig.volume.label} price seems unusually high (max ${formatCurrency(maxPrice, regionConfig)})`;
           }
           break;
 
@@ -237,8 +245,8 @@ export function FuelForm({
           const mileage = parseInt(value);
           if (isNaN(mileage) || mileage < 0) {
             newErrors.mileage = 'Mileage must be 0 or greater';
-          } else if (mileage > 1000000) {
-            newErrors.mileage = 'Mileage seems unusually high';
+          } else if (mileage > (regionConfig.distance.unit === 'kilometers' ? 1600000 : 1000000)) {
+            newErrors.mileage = 'Odometer reading seems unusually high';
           }
           break;
 
@@ -267,50 +275,50 @@ export function FuelForm({
   };
 
   const getQuantityLabel = () => {
-    if (!selectedVehicle) return 'Quantity';
+    if (!selectedVehicle) return `Quantity (${regionConfig.volume.label})`;
     switch (selectedVehicle.type) {
       case 'electric':
         return 'Quantity (kWh)';
       case 'gas':
       case 'hybrid':
       default:
-        return 'Quantity (gallons)';
+        return `Quantity (${regionConfig.volume.label})`;
     }
   };
 
   const getPriceLabel = () => {
-    if (!selectedVehicle) return 'Price per Unit';
+    if (!selectedVehicle) return `Price per ${regionConfig.volume.abbreviation}`;
     switch (selectedVehicle.type) {
       case 'electric':
-        return 'Price per kWh ($)';
+        return 'Price per kWh';
       case 'gas':
       case 'hybrid':
       default:
-        return 'Price per gallon ($)';
+        return `Price per ${regionConfig.volume.abbreviation}`;
     }
   };
 
   const getQuantityPlaceholder = () => {
-    if (!selectedVehicle) return 'e.g., 10';
+    if (!selectedVehicle) return regionConfig.volume.unit === 'liters' ? 'e.g., 40' : 'e.g., 10';
     switch (selectedVehicle.type) {
       case 'electric':
         return 'e.g., 50';
       case 'gas':
       case 'hybrid':
       default:
-        return 'e.g., 12.5';
+        return regionConfig.volume.unit === 'liters' ? 'e.g., 40' : 'e.g., 12.5';
     }
   };
 
   const getPricePlaceholder = () => {
-    if (!selectedVehicle) return 'e.g., 3.50';
+    if (!selectedVehicle) return regionConfig.currency.code === 'IDR' ? 'e.g., 15000' : 'e.g., 3.50';
     switch (selectedVehicle.type) {
       case 'electric':
-        return 'e.g., 0.15';
+        return regionConfig.currency.code === 'IDR' ? 'e.g., 2000' : 'e.g., 0.15';
       case 'gas':
       case 'hybrid':
       default:
-        return 'e.g., 3.45';
+        return regionConfig.currency.code === 'IDR' ? 'e.g., 15000' : 'e.g., 3.45';
     }
   };
 
@@ -385,10 +393,10 @@ export function FuelForm({
 
           {/* Mileage */}
           <View style={styles.fieldGroup}>
-            <ThemedText style={styles.label}>Odometer Reading</ThemedText>
+            <ThemedText style={styles.label}>Odometer Reading ({regionConfig.distance.abbreviation})</ThemedText>
             <TextInput
               style={[styles.input, errors.mileage && styles.inputError]}
-              placeholder="e.g., 45230"
+              placeholder={`e.g., ${regionConfig.distance.unit === 'kilometers' ? '72500' : '45230'}`}
               value={formData.mileage}
               onChangeText={(value) => updateFormData('mileage', value)}
               keyboardType="numeric"
@@ -433,12 +441,12 @@ export function FuelForm({
 
           {/* Total Amount (Calculated) */}
           <View style={styles.fieldGroup}>
-            <ThemedText style={styles.label}>Total Amount ($)</ThemedText>
+            <ThemedText style={styles.label}>Total Amount ({regionConfig.currency.symbol})</ThemedText>
             <View style={styles.calculatedAmountContainer}>
               <TextInput
                 style={[styles.input, styles.calculatedInput, styles.readonlyInput]}
                 placeholder="0.00"
-                value={calculateTotalAmount()}
+                value={formatCurrency(parseFloat(calculateTotalAmount()) || 0, regionConfig)}
                 editable={false} // Read-only since it's calculated
               />
               <View style={styles.calculateIconContainer}>
@@ -448,8 +456,8 @@ export function FuelForm({
             <ThemedText style={styles.helperText}>
               Automatically calculated from quantity × price per unit
               {selectedVehicle && selectedVehicle.type === 'electric'
-                ? ` (${formData.quantity || 0} kWh × $${formData.pricePerUnit || '0'})`
-                : ` (${formData.quantity || 0} gallons × $${formData.pricePerUnit || '0'})`
+                ? ` (${formData.quantity || 0} kWh × ${regionConfig.currency.symbol}${formData.pricePerUnit || '0'})`
+                : ` (${formData.quantity || 0} ${regionConfig.volume.abbreviation} × ${regionConfig.currency.symbol}${formData.pricePerUnit || '0'})`
               }
             </ThemedText>
           </View>
@@ -500,14 +508,17 @@ export function FuelForm({
             </ThemedText>
           </View>
 
-          {/* MPG Display for Gas Vehicles */}
+          {/* Efficiency Display for Gas Vehicles */}
           {selectedVehicle && (selectedVehicle.type === 'gas' || selectedVehicle.type === 'hybrid') && (
             <View style={styles.fieldGroup}>
               <ThemedText style={styles.label}>
-                {selectedVehicle.type === 'hybrid' ? 'MPG (Gas Engine)' : 'MPG'}
+                {selectedVehicle.type === 'hybrid'
+                  ? `Efficiency (${regionConfig.efficiency.label}, gas engine)`
+                  : `Efficiency (${regionConfig.efficiency.label})`
+                }
               </ThemedText>
               <ThemedText style={styles.mpgText}>
-                Will be calculated automatically based on previous entries
+                Will be calculated automatically based on previous entries ({regionConfig.efficiency.formula})
               </ThemedText>
             </View>
           )}

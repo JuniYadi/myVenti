@@ -20,6 +20,7 @@ import { ThemedView } from '@/components/themed-view';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { ServiceRecord, ServiceFormData, Vehicle } from '@/types/data';
 import { VehicleService } from '@/services/index';
+import { useRegion, formatCurrency, convertDistance } from '@/hooks/use-region';
 
 interface ServiceFormProps {
   serviceRecord?: ServiceRecord | null;
@@ -63,6 +64,7 @@ export function ServiceForm({
   submitButtonText = 'Add Service Record',
   showCancelButton = true,
 }: ServiceFormProps) {
+  const { regionConfig } = useRegion();
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null);
   const [showServiceSuggestions, setShowServiceSuggestions] = useState(false);
@@ -129,12 +131,14 @@ export function ServiceForm({
       newErrors.cost = 'Cost is required';
     } else if (isNaN(parseFloat(formData.cost)) || parseFloat(formData.cost) < 0) {
       newErrors.cost = 'Cost must be 0 or greater';
+    } else if (parseFloat(formData.cost) > (regionConfig.currency.code === 'IDR' ? 10000000 : 5000)) {
+      newErrors.cost = `Cost seems unusually high (max ${formatCurrency(regionConfig.currency.code === 'IDR' ? 10000000 : 5000, regionConfig)})`;
     }
 
     if (!formData.mileage.trim()) {
-      newErrors.mileage = 'Mileage is required';
+      newErrors.mileage = 'Odometer reading is required';
     } else if (isNaN(parseInt(formData.mileage)) || parseInt(formData.mileage) < 0) {
-      newErrors.mileage = 'Mileage must be 0 or greater';
+      newErrors.mileage = 'Odometer reading must be 0 or greater';
     }
 
     setErrors(newErrors);
@@ -260,10 +264,10 @@ export function ServiceForm({
 
           {/* Mileage */}
           <View style={styles.fieldGroup}>
-            <ThemedText style={styles.label}>Mileage</ThemedText>
+            <ThemedText style={styles.label}>Odometer Reading ({regionConfig.distance.abbreviation})</ThemedText>
             <TextInput
               style={[styles.input, errors.mileage && styles.inputError]}
-              placeholder="e.g., 45230"
+              placeholder={`e.g., ${regionConfig.distance.unit === 'kilometers' ? '72500' : '45230'}`}
               value={formData.mileage}
               onChangeText={(value) => updateFormData('mileage', value)}
               keyboardType="numeric"
@@ -324,10 +328,10 @@ export function ServiceForm({
 
           {/* Cost */}
           <View style={styles.fieldGroup}>
-            <ThemedText style={styles.label}>Cost ($)</ThemedText>
+            <ThemedText style={styles.label}>Cost ({regionConfig.currency.symbol})</ThemedText>
             <TextInput
               style={[styles.input, errors.cost && styles.inputError]}
-              placeholder="e.g., 45.99"
+              placeholder={`e.g., ${regionConfig.currency.code === 'IDR' ? '500000' : '45.99'}`}
               value={formData.cost}
               onChangeText={(value) => updateFormData('cost', value)}
               keyboardType="decimal-pad"

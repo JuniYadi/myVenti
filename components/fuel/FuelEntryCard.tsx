@@ -20,6 +20,7 @@ import { ThemedText } from '@/components/themed-text';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import type { FuelEntry, Vehicle } from '@/types/data';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useRegion, formatCurrency, convertVolume, convertDistance } from '@/hooks/use-region';
 import { Colors } from '@/constants/theme';
 import * as Haptics from 'expo-haptics';
 
@@ -34,6 +35,7 @@ interface FuelEntryCardProps {
 export function FuelEntryCard({ entry, vehicle, onEdit, onDelete, onPress }: FuelEntryCardProps) {
   const colorScheme = useColorScheme() || 'light';
   const colors = Colors[colorScheme];
+  const { regionConfig } = useRegion();
 
   const translateX = useRef(new Animated.Value(0)).current;
   const lastOffset = useRef(0);
@@ -42,12 +44,24 @@ export function FuelEntryCard({ entry, vehicle, onEdit, onDelete, onPress }: Fue
 
   // Format helpers
   const formatQuantity = () => {
-    const quantity = entry.quantity.toFixed(2);
-    return vehicle.type === 'electric' ? `${quantity} kWh` : `${quantity} gal`;
+    let quantity = entry.quantity; // stored in gallons internally
+    let unit = 'gal';
+
+    if (vehicle.type !== 'electric') {
+      // Convert to user's preferred unit
+      if (regionConfig.volume.unit === 'liters') {
+        quantity = convertVolume(entry.quantity, 'gallons', 'liters');
+        unit = 'L';
+      } else {
+        unit = regionConfig.volume.abbreviation;
+      }
+    }
+
+    return vehicle.type === 'electric' ? `${entry.quantity.toFixed(2)} kWh` : `${quantity.toFixed(2)} ${unit}`;
   };
 
   const formatPriceLabel = () => {
-    return vehicle.type === 'electric' ? 'Price/kWh' : 'Price/Gal';
+    return vehicle.type === 'electric' ? 'Price/kWh' : `Price/${regionConfig.volume.abbreviation}`;
   };
 
   const formatMPG = () => {
@@ -227,13 +241,13 @@ export function FuelEntryCard({ entry, vehicle, onEdit, onDelete, onPress }: Fue
                 />
                 <Text style={styles.compactDate}>{entry.date}</Text>
                 <Text style={styles.compactVehicle}>{vehicle.name}</Text>
-                <Text style={styles.compactAmount}>${entry.amount.toFixed(2)}</Text>
+                <Text style={styles.compactAmount}>{formatCurrency(entry.amount, regionConfig)}</Text>
               </View>
 
               {/* Single line with quantity and price */}
               <View style={styles.compactSubHeader}>
                 <Text style={styles.compactQuantity}>{formatQuantity()}</Text>
-                <Text style={styles.compactPrice}>• ${entry.pricePerUnit.toFixed(2)}/{vehicle.type === 'electric' ? 'kWh' : 'gal'}</Text>
+                <Text style={styles.compactPrice}>• {formatCurrency(entry.pricePerUnit, regionConfig)}/{vehicle.type === 'electric' ? 'kWh' : regionConfig.volume.abbreviation}</Text>
               </View>
 
               {entry.fuelStation && (
