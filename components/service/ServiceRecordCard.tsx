@@ -20,6 +20,7 @@ import { ThemedText } from '@/components/themed-text';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import type { ServiceRecord, Vehicle } from '@/types/data';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useRegion, formatCurrency, convertDistance } from '@/hooks/use-region';
 import { Colors } from '@/constants/theme';
 import * as Haptics from 'expo-haptics';
 
@@ -34,6 +35,7 @@ interface ServiceRecordCardProps {
 export function ServiceRecordCard({ serviceRecord, vehicle, onEdit, onDelete, onPress }: ServiceRecordCardProps) {
   const colorScheme = useColorScheme() || 'light';
   const colors = Colors[colorScheme];
+  const { regionConfig } = useRegion();
 
   const translateX = useRef(new Animated.Value(0)).current;
   const lastOffset = useRef(0);
@@ -261,7 +263,7 @@ export function ServiceRecordCard({ serviceRecord, vehicle, onEdit, onDelete, on
                 <ThemedText style={styles.serviceDescription}>{serviceRecord.description}</ThemedText>
               </View>
               <View style={styles.costSection}>
-                <ThemedText style={styles.cost}>${serviceRecord.cost.toFixed(2)}</ThemedText>
+                <ThemedText style={styles.cost}>{formatCurrency(serviceRecord.cost, regionConfig)}</ThemedText>
               </View>
             </View>
 

@@ -10,11 +10,14 @@ import {
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { useThemeManager } from '@/hooks/use-theme-manager';
+import { useRegion } from '@/hooks/use-region';
 import { Colors, Spacing, Typography } from '@/constants/theme';
 import { IconSymbol } from '@/components/ui/icon-symbol';
+import { router } from 'expo-router';
 
 export default function SettingsScreen() {
   const { themeMode, colorScheme, setThemeMode, isLoading } = useThemeManager();
+  const { regionConfig } = useRegion();
   const colors = Colors[colorScheme];
 
   const [notifications, setNotifications] = useState(true);
@@ -59,6 +62,13 @@ export default function SettingsScreen() {
           value: darkMode,
           onToggle: handleDarkModeToggle,
           disabled: isLoading,
+        },
+        {
+          icon: 'globe',
+          title: 'Region & Currency',
+          subtitle: `${regionConfig.flag} ${regionConfig.currency.name} - ${regionConfig.volume.label}`,
+          type: 'action',
+          onPress: () => router.push('/region-settings'),
         },
         {
           icon: 'bell.fill',
