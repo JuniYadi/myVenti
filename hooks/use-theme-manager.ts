@@ -81,10 +81,11 @@ export function useThemeManager(): ThemeContextType {
 // Export a hook that mimics the original useColorScheme interface for backward compatibility
 export function useColorScheme(): 'light' | 'dark' {
   const { colorScheme, isLoading } = useThemeManager();
+  const systemColorScheme = useNativeColorScheme() ?? 'light';
 
   // Return system theme while loading to prevent layout shifts
   if (isLoading) {
-    return useNativeColorScheme() ?? 'light';
+    return systemColorScheme;
   }
 
   return colorScheme;
