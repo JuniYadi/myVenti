@@ -42,7 +42,6 @@ function RootLayoutContent() {
           </>
         )}
       </Stack>
-      <StatusBar style="auto" />
     </NavigationThemeProvider>
   );
 }
@@ -57,6 +56,7 @@ export default function RootLayout() {
           </AuthProvider>
         </RegionProvider>
       </ThemeProvider>
+      <StatusBar style="auto" />
     </GestureHandlerRootView>
   );
 }

@@ -7,7 +7,7 @@ import { ThemedText } from '../components/themed-text';
 import { ThemedView } from '../components/themed-view';
 import { AuthButton } from '../components/auth/auth-button';
 import { useAuth } from '../hooks/use-auth';
-import { useColorScheme } from '../hooks/use-color-scheme';
+import { useColorScheme } from '../hooks/use-theme-manager';
 
 export default function WelcomeScreen() {
   const { signInWithGoogle } = useAuth();
