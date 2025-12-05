@@ -3,6 +3,7 @@ import { ThemedView } from '@/components/themed-view';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Colors, Spacing, Typography } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useRegion, formatCurrency } from '@/hooks/use-region';
 import { DashboardService, VehicleService } from '@/services/index';
 import { DashboardSummary, RecentActivity, VehicleFormData } from '@/types/data';
 import { useRouter } from 'expo-router';
@@ -20,6 +21,7 @@ export default function HomeScreen() {
   const colorScheme = useColorScheme() ?? 'light';
   const colors = Colors[colorScheme];
   const router = useRouter();
+  const { regionConfig } = useRegion();
 
   const [dashboardData, setDashboardData] = useState<DashboardSummary>({
     totalVehicles: 0,
@@ -155,7 +157,7 @@ export default function HomeScreen() {
             ]}
           >
             <ThemedText style={styles.summaryValue}>
-              ${dashboardData.monthlyFuelCost.toFixed(0)}
+              {formatCurrency(dashboardData.monthlyFuelCost, regionConfig)}
             </ThemedText>
             <ThemedText style={styles.summaryLabel}>
               Fuel Cost
