@@ -16,8 +16,6 @@ import { Colors, Spacing, Typography } from '@/constants/theme';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { router } from 'expo-router';
 import { DataService } from '@/services/DataService';
-import PrivacyPolicyModal from '@/components/modals/PrivacyPolicyModal';
-import TermsOfServiceModal from '@/components/modals/TermsOfServiceModal';
 
 export default function SettingsScreen() {
   const { themeMode, colorScheme, setThemeMode, isLoading } = useThemeManager();
@@ -26,8 +24,6 @@ export default function SettingsScreen() {
 
   const [notifications, setNotifications] = useState(true);
   const [autoBackup, setAutoBackup] = useState(false);
-  const [showPrivacyPolicy, setShowPrivacyPolicy] = useState(false);
-  const [showTermsOfService, setShowTermsOfService] = useState(false);
   
   // Initialize dark mode state based on theme manager
   const darkMode = themeMode === 'dark' || (themeMode === 'system' && colorScheme === 'dark');
@@ -199,14 +195,14 @@ export default function SettingsScreen() {
           title: 'Privacy Policy',
           subtitle: 'Read our privacy policy',
           type: 'action',
-          onPress: () => setShowPrivacyPolicy(true),
+          onPress: () => router.push('/privacy-policy'),
         },
         {
           icon: 'doc.text.fill',
           title: 'Terms of Service',
           subtitle: 'Read our terms of service',
           type: 'action',
-          onPress: () => setShowTermsOfService(true),
+          onPress: () => router.push('/terms-of-service'),
         },
       ],
     },
@@ -327,16 +323,6 @@ export default function SettingsScreen() {
           </ThemedText>
         </View>
       </ScrollView>
-
-      {/* Modals */}
-      <PrivacyPolicyModal
-        visible={showPrivacyPolicy}
-        onClose={() => setShowPrivacyPolicy(false)}
-      />
-      <TermsOfServiceModal
-        visible={showTermsOfService}
-        onClose={() => setShowTermsOfService(false)}
-      />
     </ThemedView>
   );
 }
