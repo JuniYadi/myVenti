@@ -30,31 +30,79 @@ export default function RegionSettingsScreen() {
   console.log('📍 Current region in RegionSettingsScreen:', currentRegion);
   console.log('🏛️ Region config in RegionSettingsScreen:', regionConfig);
 
-  const handleRegionSelect = async (region: RegionCode) => {
+  const handleRegionSelect = (region: RegionCode) => {
     console.log(`🔄 Region selected: ${region} (${REGION_CONFIGS[region].name})`);
 
-    try {
-      console.log('⏳ Setting region...');
-      await setRegion(region);
-      console.log('✅ Region set successfully');
-
-      Alert.alert(
-        'Region Updated',
-        `Your region has been set to ${REGION_CONFIGS[region].name}. Currency and units will now be displayed in ${region === 'ID' ? 'Indonesian Rupiah and metric units' : 'US Dollars and imperial units'}.`,
-        [
-          {
-            text: 'OK',
-            onPress: () => {
-              console.log('⬅️ Navigating back to settings');
-              router.back();
-            },
-          },
-        ]
-      );
-    } catch (error) {
-      console.error('❌ Error updating region:', error);
-      Alert.alert('Error', 'Failed to update region setting');
+    // Skip confirmation if selecting the same region
+    if (currentRegion === region) {
+      Alert.alert('Region Already Selected', `Your region is already set to ${REGION_CONFIGS[region].name}.`);
+      return;
     }
+
+    const selectedRegionName = REGION_CONFIGS[region].name;
+    const currentRegionName = REGION_CONFIGS[currentRegion].name;
+
+    Alert.alert(
+      '⚠️ Warning: Region Change Will Delete Data',
+      `Changing your region from ${currentRegionName} to ${selectedRegionName} will:\n\n• 🗑️ Delete ALL existing vehicle records\n• 🗑️ Delete ALL service history\n• 🗑️ Delete ALL fuel tracking data\n• 🗑️ Reset ALL app settings and preferences\n\nThis action cannot be undone. All your data will be permanently lost.\n\nAre you absolutely sure you want to continue?`,
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+          onPress: () => {
+            console.log('❌ Region change cancelled by user');
+          },
+        },
+        {
+          text: 'Delete All Data & Continue',
+          style: 'destructive',
+          onPress: async () => {
+            // Double confirmation for destructive action
+            Alert.alert(
+              '🚨 Final Confirmation Required',
+              `This is your FINAL WARNING.\n\nAfter changing to ${selectedRegionName}:\n\n• All vehicles will be deleted\n• All service records will be deleted\n• All fuel logs will be deleted\n• There is NO WAY to recover this data\n\nType "DELETE" to confirm or press Cancel to abort.`,
+              [
+                {
+                  text: 'Cancel',
+                  style: 'cancel',
+                  onPress: () => {
+                    console.log('❌ Region change cancelled at final confirmation');
+                  },
+                },
+                {
+                  text: 'I Understand - Delete Everything',
+                  style: 'destructive',
+                  onPress: async () => {
+                    try {
+                      console.log('⏳ Setting region after confirmation...');
+                      await setRegion(region);
+                      console.log('✅ Region set successfully');
+
+                      Alert.alert(
+                        'Region Updated',
+                        `Your region has been set to ${selectedRegionName}.\n\nCurrency and units will now be displayed in ${region === 'ID' ? 'Indonesian Rupiah and metric units' : 'US Dollars and imperial units'}.\n\nAll previous data has been permanently deleted.`,
+                        [
+                          {
+                            text: 'OK',
+                            onPress: () => {
+                              console.log('⬅️ Navigating back to settings');
+                              router.back();
+                            },
+                          },
+                        ]
+                      );
+                    } catch (error) {
+                      console.error('❌ Error updating region:', error);
+                      Alert.alert('Error', 'Failed to update region setting');
+                    }
+                  },
+                },
+              ]
+            );
+          },
+        },
+      ]
+    );
   };
 
   return (
@@ -67,6 +115,20 @@ export default function RegionSettingsScreen() {
           <ThemedText style={[styles.subtitle, { color: colors.icon }]}>
             Select your preferred currency and measurement units
           </ThemedText>
+        </View>
+
+        <View style={styles.warningSection}>
+          <View style={[styles.warningCard, { backgroundColor: '#FEF2F2', borderColor: '#FCA5A5', borderWidth: 1 }]}>
+            <IconSymbol name="exclamationmark.triangle.fill" size={24} color="#DC2626" />
+            <View style={styles.warningContent}>
+              <ThemedText style={[styles.warningTitle, { color: '#DC2626' }]}>
+                ⚠️ Important Warning
+              </ThemedText>
+              <ThemedText style={[styles.warningText, { color: '#991B1B' }]}>
+                Changing regions will PERMANENTLY DELETE all your data including vehicles, service history, and fuel records. This action CANNOT be undone.
+              </ThemedText>
+            </View>
+          </View>
         </View>
 
         <View style={styles.infoSection}>
@@ -180,6 +242,29 @@ const styles = StyleSheet.create({
   subtitle: {
     fontSize: Typography.sizes.body,
     fontWeight: Typography.weights.normal,
+  },
+  warningSection: {
+    marginBottom: Spacing.lg,
+  },
+  warningCard: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    padding: Spacing.md,
+    borderRadius: Spacing.card.borderRadius,
+    gap: Spacing.md,
+  },
+  warningContent: {
+    flex: 1,
+  },
+  warningTitle: {
+    fontSize: Typography.sizes.body,
+    fontWeight: Typography.weights.bold,
+    marginBottom: Spacing.xs / 2,
+  },
+  warningText: {
+    fontSize: Typography.sizes.caption,
+    fontWeight: Typography.weights.normal,
+    lineHeight: 18,
   },
   infoSection: {
     marginBottom: Spacing.lg,
