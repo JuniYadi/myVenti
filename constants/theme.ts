@@ -35,6 +35,7 @@ export const Colors = {
     vehicleOffline: '#FF3B30',
     fuelLow: '#FF9500',
     serviceDue: '#FF9500',
+    inputBackground: '#F8F9FA',
   },
   dark: {
     text: '#ECEDEE',
@@ -62,6 +63,7 @@ export const Colors = {
     vehicleOffline: '#FF453A',
     fuelLow: '#FF9F0A',
     serviceDue: '#FF9F0A',
+    inputBackground: '#1C1C1E',
   },
 };
 
