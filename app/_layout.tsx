@@ -5,13 +5,13 @@ import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import 'react-native-reanimated';
 
-import { ThemeProvider, useColorScheme } from '../hooks/use-theme-manager';
-import { RegionProvider } from '../hooks/use-region';
 import { AuthProvider, useAuth } from '../hooks/use-auth';
+import { RegionProvider } from '../hooks/use-region';
+import { ThemeProvider, useColorScheme } from '../hooks/use-theme-manager';
 
-export const unstable_settings = {
-  anchor: '(tabs)',
-};
+// export const unstable_settings = {
+//   anchor: '(tabs)',
+// };
 
 function RootLayoutContent() {
   const colorScheme = useColorScheme();
