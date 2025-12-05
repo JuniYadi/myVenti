@@ -13,6 +13,36 @@ export const unstable_settings = {
   anchor: '(tabs)',
 };
 
+function AuthenticatedApp() {
+  const colorScheme = useColorScheme();
+
+  return (
+    <NavigationThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+      <Stack>
+        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        <Stack.Screen name="region-settings" options={{ title: 'Region Settings', headerShown: false }} />
+        <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
+      </Stack>
+      <StatusBar style="auto" />
+    </NavigationThemeProvider>
+  );
+}
+
+function UnauthenticatedApp() {
+  const colorScheme = useColorScheme();
+
+  return (
+    <NavigationThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+      <Stack>
+        <Stack.Screen name="welcome" options={{ headerShown: false }} />
+        <Stack.Screen name="login" options={{ headerShown: false }} />
+        <Stack.Screen name="signup" options={{ headerShown: false }} />
+      </Stack>
+      <StatusBar style="auto" />
+    </NavigationThemeProvider>
+  );
+}
+
 function RootLayoutContent() {
   const colorScheme = useColorScheme();
   const { user, loading } = useAuth();
@@ -25,31 +55,7 @@ function RootLayoutContent() {
     );
   }
 
-  if (!user) {
-    // User is not authenticated, will be handled by welcome screen and auth screens
-    return (
-      <NavigationThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-        <Stack>
-          <Stack.Screen name="welcome" options={{ headerShown: false }} />
-          <Stack.Screen name="login" options={{ headerShown: false }} />
-          <Stack.Screen name="signup" options={{ headerShown: false }} />
-        </Stack>
-        <StatusBar style="auto" />
-      </NavigationThemeProvider>
-    );
-  }
-
-  // User is authenticated, show main app
-  return (
-    <NavigationThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <Stack>
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="region-settings" options={{ title: 'Region Settings', headerShown: false }} />
-        <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
-      </Stack>
-      <StatusBar style="auto" />
-    </NavigationThemeProvider>
-  );
+  return user ? <AuthenticatedApp /> : <UnauthenticatedApp />;
 }
 
 export default function RootLayout() {
