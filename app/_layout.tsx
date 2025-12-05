@@ -13,36 +13,6 @@ export const unstable_settings = {
   anchor: '(tabs)',
 };
 
-function AuthenticatedApp() {
-  const colorScheme = useColorScheme();
-
-  return (
-    <NavigationThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <Stack>
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="region-settings" options={{ title: 'Region Settings', headerShown: false }} />
-        <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
-      </Stack>
-      <StatusBar style="auto" />
-    </NavigationThemeProvider>
-  );
-}
-
-function UnauthenticatedApp() {
-  const colorScheme = useColorScheme();
-
-  return (
-    <NavigationThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <Stack>
-        <Stack.Screen name="welcome" options={{ headerShown: false }} />
-        <Stack.Screen name="login" options={{ headerShown: false }} />
-        <Stack.Screen name="signup" options={{ headerShown: false }} />
-      </Stack>
-      <StatusBar style="auto" />
-    </NavigationThemeProvider>
-  );
-}
-
 function RootLayoutContent() {
   const colorScheme = useColorScheme();
   const { user, loading } = useAuth();
@@ -55,7 +25,26 @@ function RootLayoutContent() {
     );
   }
 
-  return user ? <AuthenticatedApp /> : <UnauthenticatedApp />;
+  return (
+    <NavigationThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+      <Stack>
+        {user ? (
+          <>
+            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+            <Stack.Screen name="region-settings" options={{ title: 'Region Settings', headerShown: false }} />
+            <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
+          </>
+        ) : (
+          <>
+            <Stack.Screen name="welcome" options={{ headerShown: false }} />
+            <Stack.Screen name="login" options={{ headerShown: false }} />
+            <Stack.Screen name="signup" options={{ headerShown: false }} />
+          </>
+        )}
+      </Stack>
+      <StatusBar style="auto" />
+    </NavigationThemeProvider>
+  );
 }
 
 export default function RootLayout() {
