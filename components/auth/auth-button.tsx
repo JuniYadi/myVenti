@@ -1,8 +1,8 @@
 import React from 'react';
 import { TouchableOpacity, Text, StyleSheet, View, ActivityIndicator } from 'react-native';
-import { ThemedText } from '@/components/ThemedText';
-import { useColorScheme } from '@/hooks/use-color-scheme';
-import { Colors } from '@/constants/theme';
+import { ThemedText } from '../themed-text';
+import { useColorScheme } from '../../hooks/use-color-scheme';
+import { Colors } from '../../constants/theme';
 
 interface AuthButtonProps {
   title: string;

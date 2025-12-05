@@ -3,11 +3,11 @@ import React from 'react';
 import { StyleSheet, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
-import { ThemedText } from '@/components/ThemedText';
-import { ThemedView } from '@/components/ThemedView';
-import { AuthButton } from '@/components/auth/auth-button';
-import { useAuth } from '@/hooks/use-auth';
-import { useColorScheme } from '@/hooks/use-color-scheme';
+import { ThemedText } from '../components/themed-text';
+import { ThemedView } from '../components/themed-view';
+import { AuthButton } from '../components/auth/auth-button';
+import { useAuth } from '../hooks/use-auth';
+import { useColorScheme } from '../hooks/use-color-scheme';
 
 export default function WelcomeScreen() {
   const { signInWithGoogle } = useAuth();

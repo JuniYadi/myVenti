@@ -1,8 +1,8 @@
 import React from 'react';
 import { TextInput, TextInputProps, View, StyleSheet } from 'react-native';
-import { ThemedText } from '@/components/ThemedText';
-import { useColorScheme } from '@/hooks/use-color-scheme';
-import { Colors } from '@/constants/theme';
+import { ThemedText } from '../themed-text';
+import { useColorScheme } from '../../hooks/use-color-scheme';
+import { Colors } from '../../constants/theme';
 
 interface AuthInputProps extends TextInputProps {
   label: string;

@@ -5,9 +5,9 @@ import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import 'react-native-reanimated';
 
-import { ThemeProvider, useColorScheme } from '@/hooks/use-theme-manager';
-import { RegionProvider } from '@/hooks/use-region';
-import { AuthProvider, useAuth } from '@/hooks/use-auth';
+import { ThemeProvider, useColorScheme } from '../hooks/use-theme-manager';
+import { RegionProvider } from '../hooks/use-region';
+import { AuthProvider, useAuth } from '../hooks/use-auth';
 
 export const unstable_settings = {
   anchor: '(tabs)',

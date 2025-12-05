@@ -1,8 +1,8 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut as firebaseSignOut, GoogleAuthProvider, signInWithCredential } from 'firebase/auth';
 import { GoogleSignin, statusCodes } from '@react-native-google-signin/google-signin';
-import { auth } from '@/firebase';
-import { GOOGLE_SIGN_IN_CONFIG } from '@/constants/firebase';
+import { auth } from '../firebase';
+import { GOOGLE_SIGN_IN_CONFIG } from '../constants/firebase';
 
 interface AuthContextType {
   user: User | null;

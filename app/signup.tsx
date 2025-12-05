@@ -3,12 +3,12 @@ import React, { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
-import { ThemedText } from '@/components/ThemedText';
-import { ThemedView } from '@/components/ThemedView';
-import { AuthButton } from '@/components/auth/auth-button';
-import { AuthInput } from '@/components/auth/auth-input';
-import { ErrorMessage } from '@/components/auth/error-message';
-import { useAuth } from '@/hooks/use-auth';
+import { ThemedText } from '../components/themed-text';
+import { ThemedView } from '../components/themed-view';
+import { AuthButton } from '../components/auth/auth-button';
+import { AuthInput } from '../components/auth/auth-input';
+import { ErrorMessage } from '../components/auth/error-message';
+import { useAuth } from '../hooks/use-auth';
 
 export default function SignupScreen() {
   const [email, setEmail] = useState('');
