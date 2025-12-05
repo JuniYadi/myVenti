@@ -15,6 +15,7 @@ import { useRegion } from '@/hooks/use-region';
 import { Colors, Spacing, Typography } from '@/constants/theme';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { router } from 'expo-router';
+import { DataService } from '@/services/DataService';
 
 export default function SettingsScreen() {
   const { themeMode, colorScheme, setThemeMode, isLoading } = useThemeManager();
@@ -117,7 +118,59 @@ export default function SettingsScreen() {
           title: 'Clear Cache',
           subtitle: 'Free up app storage space',
           type: 'action',
-          onPress: () => console.log('Clear cache'),
+          onPress: async () => {
+            console.log('🗑️ Clear Cache button pressed');
+
+            Alert.alert(
+              'Clear All Data?',
+              'This will permanently delete ALL your data including:\n\n• All vehicles\n• All fuel entries\n• All service records\n\nThis action cannot be undone. Are you sure?',
+              [
+                {
+                  text: 'Cancel',
+                  style: 'cancel',
+                  onPress: () => {
+                    console.log('❌ Cache clearing cancelled by user');
+                  },
+                },
+                {
+                  text: 'Delete Everything',
+                  style: 'destructive',
+                  onPress: async () => {
+                    try {
+                      console.log('⏳ Starting to clear all cache data...');
+
+                      // Get current data stats before clearing
+                      const beforeStats = await DataService.getDataStats();
+                      console.log('📊 Data stats before clearing:', beforeStats);
+
+                      // Clear all data
+                      await DataService.clearAllData();
+
+                      // Get data stats after clearing to confirm
+                      const afterStats = await DataService.getDataStats();
+                      console.log('📊 Data stats after clearing:', afterStats);
+
+                      Alert.alert(
+                        'Cache Cleared',
+                        `All app data has been successfully deleted.\n\nCleared:\n• ${beforeStats.vehiclesCount} vehicles\n• ${beforeStats.fuelEntriesCount} fuel entries\n• ${beforeStats.serviceRecordsCount} service records\n\nYou can start fresh by adding new vehicles.`,
+                        [
+                          {
+                            text: 'OK',
+                            onPress: () => {
+                              console.log('✅ Cache clearing completed successfully');
+                            },
+                          },
+                        ]
+                      );
+                    } catch (error) {
+                      console.error('❌ Error clearing cache:', error);
+                      Alert.alert('Error', 'Failed to clear cache. Please try again.');
+                    }
+                  },
+                },
+              ]
+            );
+          },
         },
       ],
     },

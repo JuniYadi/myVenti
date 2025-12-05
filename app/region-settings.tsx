@@ -19,6 +19,7 @@ import { useThemeManager } from '@/hooks/use-theme-manager';
 import { Colors, Spacing, Typography } from '@/constants/theme';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { router } from 'expo-router';
+import { DataService } from '@/services/DataService';
 
 export default function RegionSettingsScreen() {
   console.log('🌍 RegionSettingsScreen component loaded');
@@ -74,13 +75,23 @@ export default function RegionSettingsScreen() {
                   style: 'destructive',
                   onPress: async () => {
                     try {
-                      console.log('⏳ Setting region after confirmation...');
+                      console.log('⏳ Clearing all data before region change...');
+
+                      // First clear all existing data
+                      await DataService.clearAllData();
+                      console.log('✅ All data cleared successfully');
+
+                      console.log('⏳ Setting region after data cleared...');
                       await setRegion(region);
                       console.log('✅ Region set successfully');
 
+                      // Get data stats to verify data was cleared
+                      const stats = await DataService.getDataStats();
+                      console.log('📊 Data stats after clearing:', stats);
+
                       Alert.alert(
                         'Region Updated',
-                        `Your region has been set to ${selectedRegionName}.\n\nCurrency and units will now be displayed in ${region === 'ID' ? 'Indonesian Rupiah and metric units' : 'US Dollars and imperial units'}.\n\nAll previous data has been permanently deleted.`,
+                        `Your region has been set to ${selectedRegionName}.\n\nCurrency and units will now be displayed in ${region === 'ID' ? 'Indonesian Rupiah and metric units' : 'US Dollars and imperial units'}.\n\nAll previous data has been permanently deleted.\n\nCleared: ${stats.vehiclesCount} vehicles, ${stats.fuelEntriesCount} fuel entries, ${stats.serviceRecordsCount} service records.`,
                         [
                           {
                             text: 'OK',
@@ -93,7 +104,7 @@ export default function RegionSettingsScreen() {
                       );
                     } catch (error) {
                       console.error('❌ Error updating region:', error);
-                      Alert.alert('Error', 'Failed to update region setting');
+                      Alert.alert('Error', 'Failed to update region setting. Please try again.');
                     }
                   },
                 },

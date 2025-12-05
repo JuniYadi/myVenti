@@ -876,6 +876,64 @@ export class ServiceService {
 }
 
 /**
+ * Data Management operations for clearing data
+ */
+export class DataService {
+  /**
+   * Clear all app data - vehicles, fuel entries, and service records
+   * This is used when changing regions or for a complete reset
+   */
+  static async clearAllData(): Promise<void> {
+    try {
+      console.log('🗑️ Starting to clear all app data...');
+
+      // Clear all data storage keys
+      await AsyncStorage.multiRemove([
+        STORAGE_KEYS.VEHICLES,
+        STORAGE_KEYS.FUEL_ENTRIES,
+        STORAGE_KEYS.SERVICE_RECORDS,
+      ]);
+
+      console.log('✅ All app data cleared successfully');
+    } catch (error) {
+      console.error('❌ Error clearing all data:', error);
+      handleStorageError(error, 'clearAllData');
+      throw error;
+    }
+  }
+
+  /**
+   * Get data statistics for debugging and validation
+   */
+  static async getDataStats(): Promise<{
+    vehiclesCount: number;
+    fuelEntriesCount: number;
+    serviceRecordsCount: number;
+  }> {
+    try {
+      const [vehicles, fuelEntries, serviceRecords] = await Promise.all([
+        VehicleService.getAll(),
+        FuelService.getAll(),
+        ServiceService.getAll(),
+      ]);
+
+      return {
+        vehiclesCount: vehicles.length,
+        fuelEntriesCount: fuelEntries.length,
+        serviceRecordsCount: serviceRecords.length,
+      };
+    } catch (error) {
+      console.error('❌ Error getting data stats:', error);
+      return {
+        vehiclesCount: 0,
+        fuelEntriesCount: 0,
+        serviceRecordsCount: 0,
+      };
+    }
+  }
+}
+
+/**
  * Dashboard and summary operations
  */
 export class DashboardService {
