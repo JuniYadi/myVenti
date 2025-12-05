@@ -9,7 +9,8 @@
     "ios": "expo start --ios",
     "web": "expo start --web",
     "lint": "expo lint",
-    "build:android": "eas build --platform android --profile developmen",
+    "build:a:dev": "eas build --platform android --profile development --local",
+    "build:a:preview": "eas build --platform android --profile preview --local",
     "mcp": "npx -y @pimzino/spec-workflow-mcp@latest --dashboard"
   },
   "dependencies": {
