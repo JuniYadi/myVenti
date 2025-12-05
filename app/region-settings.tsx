@@ -21,26 +21,39 @@ import { IconSymbol } from '@/components/ui/icon-symbol';
 import { router } from 'expo-router';
 
 export default function RegionSettingsScreen() {
+  console.log('🌍 RegionSettingsScreen component loaded');
+
   const { currentRegion, regionConfig, setRegion } = useRegion();
   const { colorScheme } = useThemeManager();
   const colors = Colors[colorScheme];
 
+  console.log('📍 Current region in RegionSettingsScreen:', currentRegion);
+  console.log('🏛️ Region config in RegionSettingsScreen:', regionConfig);
+
   const handleRegionSelect = async (region: RegionCode) => {
+    console.log(`🔄 Region selected: ${region} (${REGION_CONFIGS[region].name})`);
+
     try {
+      console.log('⏳ Setting region...');
       await setRegion(region);
+      console.log('✅ Region set successfully');
+
       Alert.alert(
         'Region Updated',
         `Your region has been set to ${REGION_CONFIGS[region].name}. Currency and units will now be displayed in ${region === 'ID' ? 'Indonesian Rupiah and metric units' : 'US Dollars and imperial units'}.`,
         [
           {
             text: 'OK',
-            onPress: () => router.back(),
+            onPress: () => {
+              console.log('⬅️ Navigating back to settings');
+              router.back();
+            },
           },
         ]
       );
     } catch (error) {
+      console.error('❌ Error updating region:', error);
       Alert.alert('Error', 'Failed to update region setting');
-      console.error('Error updating region:', error);
     }
   };
 

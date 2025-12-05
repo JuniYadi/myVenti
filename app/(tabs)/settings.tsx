@@ -6,6 +6,7 @@ import {
   Switch,
   TouchableOpacity,
   Linking,
+  Alert,
 } from 'react-native';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -68,7 +69,20 @@ export default function SettingsScreen() {
           title: 'Region & Currency',
           subtitle: `${regionConfig.flag} ${regionConfig.currency.name} - ${regionConfig.volume.label}`,
           type: 'action',
-          onPress: () => router.push('/region-settings'),
+          onPress: () => {
+            console.log('🌍 Region & Currency clicked');
+            console.log('📍 Current region:', currentRegion);
+            console.log('🏛️ Region config:', regionConfig);
+            console.log('🔄 Navigating to /region-settings');
+
+            try {
+              router.push('/region-settings');
+              console.log('✅ Navigation initiated successfully');
+            } catch (error) {
+              console.error('❌ Navigation failed:', error);
+              Alert.alert('Error', 'Failed to open region settings');
+            }
+          },
         },
         {
           icon: 'bell.fill',
