@@ -18,7 +18,7 @@ import { router } from 'expo-router';
 
 export default function SettingsScreen() {
   const { themeMode, colorScheme, setThemeMode, isLoading } = useThemeManager();
-  const { regionConfig } = useRegion();
+  const { regionConfig, currentRegion } = useRegion();
   const colors = Colors[colorScheme];
 
   const [notifications, setNotifications] = useState(true);
@@ -156,7 +156,7 @@ export default function SettingsScreen() {
   ];
 
   const renderSettingsItem = (item: any, index: number) => {
-    return (
+    const itemContent = (
       <View
         key={index}
         style={[
@@ -218,6 +218,20 @@ export default function SettingsScreen() {
         </View>
       </View>
     );
+
+    if (item.type === 'action' && item.onPress) {
+      return (
+        <TouchableOpacity
+          key={index}
+          onPress={item.onPress}
+          activeOpacity={0.7}
+        >
+          {itemContent}
+        </TouchableOpacity>
+      );
+    }
+
+    return itemContent;
   };
 
   return (
