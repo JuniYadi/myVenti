@@ -1,8 +1,8 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
-import { User, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut as firebaseSignOut, GoogleAuthProvider, signInWithCredential } from 'firebase/auth';
 import { GoogleSignin, statusCodes } from '@react-native-google-signin/google-signin';
-import { auth } from '../firebase';
+import { createUserWithEmailAndPassword, signOut as firebaseSignOut, GoogleAuthProvider, onAuthStateChanged, signInWithCredential, signInWithEmailAndPassword, User } from 'firebase/auth';
+import React, { createContext, useContext, useEffect, useState } from 'react';
 import { GOOGLE_SIGN_IN_CONFIG } from '../constants/firebase';
+import { auth } from '../firebase';
 
 interface AuthContextType {
   user: User | null;
@@ -21,6 +21,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isInitialized, setIsInitialized] = useState(false);
 
   useEffect(() => {
     // Configure Google Sign-In
@@ -29,13 +30,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       offlineAccess: true,
     });
 
-    // Listen for auth state changes
-    const unsubscribe = auth.onAuthStateChanged((authUser) => {
+    // Listen for auth state changes using the imported function
+    const unsubscribe = onAuthStateChanged(auth, (authUser) => {
+      console.log('Auth state changed:', authUser ? 'User logged in' : 'No user');
       setUser(authUser);
       setLoading(false);
+      setIsInitialized(true);
+    }, (error) => {
+      console.error('Auth state change error:', error);
+      setLoading(false);
+      setIsInitialized(true);
     });
 
-    return unsubscribe;
+    // Fallback timeout in case onAuthStateChanged doesn't fire
+    const timeout = setTimeout(() => {
+      if (!isInitialized) {
+        console.log('Auth initialization timeout - setting loading to false');
+        setLoading(false);
+        setIsInitialized(true);
+      }
+    }, 5000);
+
+    return () => {
+      unsubscribe();
+      clearTimeout(timeout);
+    };
   }, []);
 
   const signUp = async (email: string, password: string) => {

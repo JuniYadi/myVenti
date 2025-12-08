@@ -1,25 +1,26 @@
-import React, { useState } from 'react';
-import {
-  StyleSheet,
-  ScrollView,
-  View,
-  Switch,
-  TouchableOpacity,
-  Linking,
-  Alert,
-} from 'react-native';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { useThemeManager } from '@/hooks/use-theme-manager';
-import { useRegion } from '@/hooks/use-region';
-import { Colors, Spacing, Typography } from '@/constants/theme';
 import { IconSymbol } from '@/components/ui/icon-symbol';
-import { router } from 'expo-router';
+import { Colors, Spacing, Typography } from '@/constants/theme';
+import { useAuth } from '@/hooks/use-auth';
+import { useRegion } from '@/hooks/use-region';
+import { useThemeManager } from '@/hooks/use-theme-manager';
 import { DataService } from '@/services/DataService';
+import { router } from 'expo-router';
+import React, { useState } from 'react';
+import {
+    Alert,
+    ScrollView,
+    StyleSheet,
+    Switch,
+    TouchableOpacity,
+    View
+} from 'react-native';
 
 export default function SettingsScreen() {
   const { themeMode, colorScheme, setThemeMode, isLoading } = useThemeManager();
   const { regionConfig, currentRegion } = useRegion();
+  const { user, signOut } = useAuth();
   const colors = Colors[colorScheme];
 
   const [notifications, setNotifications] = useState(true);
@@ -299,6 +300,59 @@ export default function SettingsScreen() {
           </ThemedText>
         </View>
 
+        {/* User Profile Section */}
+        {user && (
+          <View style={styles.section}>
+            <ThemedText style={[styles.sectionTitle, { color: colors.icon }]}>
+              Account
+            </ThemedText>
+            <View style={[styles.profileCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+              <View style={[styles.avatarContainer, { backgroundColor: colors.primary }]}>
+                <ThemedText style={styles.avatarText}>
+                  {user.displayName?.charAt(0).toUpperCase() || user.email?.charAt(0).toUpperCase() || 'U'}
+                </ThemedText>
+              </View>
+              <View style={styles.profileInfo}>
+                <ThemedText style={[styles.profileName, { color: colors.text }]}>
+                  {user.displayName || 'User'}
+                </ThemedText>
+                <ThemedText style={[styles.profileEmail, { color: colors.icon }]}>
+                  {user.email}
+                </ThemedText>
+              </View>
+            </View>
+            <TouchableOpacity
+              style={[styles.logoutButton, { backgroundColor: colors.card, borderColor: colors.danger }]}
+              onPress={() => {
+                Alert.alert(
+                  'Sign Out',
+                  'Are you sure you want to sign out?',
+                  [
+                    { text: 'Cancel', style: 'cancel' },
+                    {
+                      text: 'Sign Out',
+                      style: 'destructive',
+                      onPress: async () => {
+                        try {
+                          await signOut();
+                        } catch (error) {
+                          console.error('Sign out error:', error);
+                        }
+                      },
+                    },
+                  ]
+                );
+              }}
+              activeOpacity={0.7}
+            >
+              <IconSymbol name="rectangle.portrait.and.arrow.right" size={20} color={colors.danger} />
+              <ThemedText style={[styles.logoutText, { color: colors.danger }]}>
+                Sign Out
+              </ThemedText>
+            </TouchableOpacity>
+          </View>
+        )}
+
         {settingsSections.map((section, sectionIndex) => (
           <View key={sectionIndex} style={styles.section}>
             <ThemedText
@@ -410,5 +464,50 @@ const styles = StyleSheet.create({
     fontSize: Typography.sizes.small,
     fontWeight: Typography.weights.normal,
     textAlign: 'center',
+  },
+  profileCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: Spacing.md,
+    borderRadius: Spacing.card.borderRadius,
+    borderWidth: 1,
+    marginBottom: Spacing.sm,
+  },
+  avatarContainer: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: Spacing.md,
+  },
+  avatarText: {
+    fontSize: Typography.sizes.heading,
+    fontWeight: Typography.weights.bold,
+    color: '#fff',
+  },
+  profileInfo: {
+    flex: 1,
+  },
+  profileName: {
+    fontSize: Typography.sizes.body,
+    fontWeight: Typography.weights.semibold,
+    marginBottom: Spacing.xs / 2,
+  },
+  profileEmail: {
+    fontSize: Typography.sizes.caption,
+  },
+  logoutButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: Spacing.md,
+    borderRadius: Spacing.card.borderRadius,
+    borderWidth: 1,
+    gap: Spacing.sm,
+  },
+  logoutText: {
+    fontSize: Typography.sizes.body,
+    fontWeight: Typography.weights.semibold,
   },
 });
