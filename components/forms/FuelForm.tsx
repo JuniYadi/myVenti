@@ -3,23 +3,23 @@
  * Supports both gas (gallons) and electric (kWh) vehicles with MPG calculation
  */
 
-import React, { useState, useEffect } from 'react';
+import { ThemedText } from '@/components/themed-text';
+import { ThemedView } from '@/components/themed-view';
+import { IconSymbol } from '@/components/ui/icon-symbol';
+import { convertVolume, formatCurrency, useRegion } from '@/hooks/use-region';
+import { VehicleService } from '@/services/index';
+import { FuelEntry, FuelFormData, Vehicle } from '@/types/data';
+import React, { useEffect, useState } from 'react';
 import {
-  View,
-  TextInput,
-  StyleSheet,
   Alert,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  StyleSheet,
+  TextInput,
   TouchableOpacity,
+  View,
 } from 'react-native';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { IconSymbol } from '@/components/ui/icon-symbol';
-import { FuelEntry, FuelFormData, Vehicle, VehicleType } from '@/types/data';
-import { VehicleService } from '@/services/index';
-import { useRegion, formatCurrency, convertVolume, convertDistance } from '@/hooks/use-region';
 
 interface FuelFormProps {
   fuelEntry?: FuelEntry | null;
@@ -39,11 +39,34 @@ export function FuelForm({
   const { regionConfig, isLoading: regionLoading } = useRegion();
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null);
+  
+  // Helper to convert stored gallons to display liters (for editing)
+  const getDisplayQuantity = () => {
+    if (!fuelEntry?.quantity) return '';
+    // Data is stored in gallons, convert to user's unit for display
+    if (regionConfig.volume.unit === 'liters') {
+      return convertVolume(fuelEntry.quantity, 'gallons', 'liters').toFixed(2);
+    }
+    return fuelEntry.quantity.toString();
+  };
+
+  // Helper to convert stored price per gallon to price per liter (for editing)
+  const getDisplayPricePerUnit = () => {
+    if (!fuelEntry?.pricePerUnit) return '';
+    // Price is stored per gallon, convert to per liter for display
+    if (regionConfig.volume.unit === 'liters') {
+      // Convert price per gallon to price per liter for display
+      const pricePerLiter = fuelEntry.pricePerUnit / 3.78541;
+      return pricePerLiter.toFixed(2);
+    }
+    return fuelEntry.pricePerUnit.toString();
+  };
+
   const [formData, setFormData] = useState<FuelFormData>({
     vehicleId: fuelEntry?.vehicleId || propVehicleId || '',
     date: fuelEntry?.date || new Date().toISOString().split('T')[0],
     amount: fuelEntry?.amount?.toString() || '',
-    quantity: fuelEntry?.quantity?.toString() || '',
+    quantity: getDisplayQuantity(),
     pricePerUnit: fuelEntry?.pricePerUnit?.toString() || '',
     mileage: fuelEntry?.mileage?.toString() || '',
     fuelStation: fuelEntry?.fuelStation || '',
@@ -120,7 +143,9 @@ export function FuelForm({
         newErrors.quantity = 'kWh amount seems unusually high (max 500)';
       } else if ((vehicleType === 'gas' || vehicleType === 'hybrid')) {
         const maxQuantity = regionConfig.volume.unit === 'liters' ? 150 : 50;
-        newErrors.quantity = `${regionConfig.volume.label} amount seems unusually high (max ${maxQuantity} ${regionConfig.volume.abbreviation})`;
+        if (quantity > maxQuantity) {
+          newErrors.quantity = `${regionConfig.volume.label} amount seems unusually high (max ${maxQuantity} ${regionConfig.volume.abbreviation})`;
+        }
       }
     }
 
@@ -136,7 +161,9 @@ export function FuelForm({
         newErrors.pricePerUnit = `kWh price seems unusually high (max ${formatCurrency(maxPrice, regionConfig)})`;
       } else if ((vehicleType === 'gas' || vehicleType === 'hybrid')) {
         const maxPrice = regionConfig.currency.code === 'IDR' ? 25000 : 10;
-        newErrors.pricePerUnit = `${regionConfig.volume.label} price seems unusually high (max ${formatCurrency(maxPrice, regionConfig)})`;
+        if (price > maxPrice) {
+          newErrors.pricePerUnit = `${regionConfig.volume.label} price seems unusually high (max ${formatCurrency(maxPrice, regionConfig)})`;
+        }
       }
     }
 
@@ -171,10 +198,25 @@ export function FuelForm({
 
     setLoading(true);
     try {
-      // Use the calculated amount from the form (already auto-calculated)
+      // Convert quantity and price from user's unit to gallons for storage (if using liters)
+      let quantityInGallons = parseFloat(formData.quantity);
+      let pricePerGallon = parseFloat(formData.pricePerUnit);
+      
+      if (regionConfig.volume.unit === 'liters' && selectedVehicle?.type !== 'electric') {
+        // Convert liters to gallons for storage
+        quantityInGallons = quantityInGallons / 3.78541;
+        // Convert price per liter to price per gallon for storage
+        pricePerGallon = pricePerGallon * 3.78541;
+      }
+
+      // Calculate the correct amount based on converted values
+      const totalAmount = quantityInGallons * pricePerGallon;
+
       const submissionData = {
         ...formData,
-        amount: parseFloat(formData.amount).toString(), // Ensure it's properly formatted
+        quantity: quantityInGallons.toString(),
+        pricePerUnit: pricePerGallon.toString(),
+        amount: totalAmount.toFixed(2),
       };
 
       await onSubmit(submissionData);
@@ -223,7 +265,9 @@ export function FuelForm({
             newErrors.quantity = 'kWh amount seems unusually high (max 500)';
           } else if ((vehicleType === 'gas' || vehicleType === 'hybrid')) {
             const maxQuantity = regionConfig.volume.unit === 'liters' ? 150 : 50;
-            newErrors.quantity = `${regionConfig.volume.label} amount seems unusually high (max ${maxQuantity} ${regionConfig.volume.abbreviation})`;
+            if (quantity > maxQuantity) {
+              newErrors.quantity = `${regionConfig.volume.label} amount seems unusually high (max ${maxQuantity} ${regionConfig.volume.abbreviation})`;
+            }
           }
           break;
 
@@ -237,7 +281,9 @@ export function FuelForm({
             newErrors.pricePerUnit = `kWh price seems unusually high (max ${formatCurrency(maxPrice, regionConfig)})`;
           } else if ((vType === 'gas' || vType === 'hybrid')) {
             const maxPrice = regionConfig.currency.code === 'IDR' ? 25000 : 10;
-            newErrors.pricePerUnit = `${regionConfig.volume.label} price seems unusually high (max ${formatCurrency(maxPrice, regionConfig)})`;
+            if (price > maxPrice) {
+              newErrors.pricePerUnit = `${regionConfig.volume.label} price seems unusually high (max ${formatCurrency(maxPrice, regionConfig)})`;
+            }
           }
           break;
 
@@ -497,7 +543,7 @@ export function FuelForm({
             />
             <View style={styles.characterCount}>
               <ThemedText style={styles.helperText}>
-                {formData.notes.length}/500 characters
+                {(formData.notes || '').length}/500 characters
               </ThemedText>
             </View>
             {errors.notes && (
