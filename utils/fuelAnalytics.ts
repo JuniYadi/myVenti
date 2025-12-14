@@ -587,7 +587,7 @@ export function analyzeSeasonalPatterns(
 // ==================== UTILITY FUNCTIONS ====================
 
 /**
- * Format MPG with appropriate units based on vehicle type
+ * Format MPG with appropriate units based on vehicle type and region
  */
 export function formatEfficiency(
   mpg: number,
@@ -595,7 +595,6 @@ export function formatEfficiency(
   preferredUnit: 'mpg' | 'kmPerLiter' | 'litersPer100km' = 'mpg'
 ): string {
   if (vehicleType === 'electric') {
-    const kmPerLiter = mpg * 0.425144;
     const milesPerKWh = mpg / 33.7; // Convert to mi/kWh
     return `${milesPerKWh.toFixed(1)} mi/kWh`;
   }
