@@ -1,27 +1,28 @@
-import React, { useState, useEffect } from 'react';
-import {
-  StyleSheet,
-  ScrollView,
-  View,
-  TouchableOpacity,
-  Alert,
-  RefreshControl,
-} from 'react-native';
-import { useRouter } from 'expo-router';
+import { ServiceListItem } from '@/components/service/ServiceListItem';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { useColorScheme } from '@/hooks/use-color-scheme';
-import { Colors, Spacing, Typography } from '@/constants/theme';
 import { IconSymbol } from '@/components/ui/icon-symbol';
-import { ServiceRecord, Vehicle } from '@/types/data';
+import { Colors, Spacing, Typography } from '@/constants/theme';
+import { useColorScheme } from '@/hooks/use-color-scheme';
+import { formatCurrency, useRegion } from '@/hooks/use-region';
 import { ServiceService, VehicleService } from '@/services/index';
-import { ServiceListItem } from '@/components/service/ServiceListItem';
-import { useFocusEffect } from 'expo-router';
+import { ServiceRecord, Vehicle } from '@/types/data';
+import { useFocusEffect, useRouter } from 'expo-router';
+import React, { useEffect, useState } from 'react';
+import {
+    Alert,
+    RefreshControl,
+    ScrollView,
+    StyleSheet,
+    TouchableOpacity,
+    View,
+} from 'react-native';
 
 export default function ServiceScreen() {
   const router = useRouter();
   const colorScheme = useColorScheme() ?? 'light';
   const colors = Colors[colorScheme];
+  const { regionConfig } = useRegion();
   const [serviceRecords, setServiceRecords] = useState<ServiceRecord[]>([]);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [loading, setLoading] = useState(false);
@@ -166,9 +167,13 @@ export default function ServiceScreen() {
               { backgroundColor: colors.primary },
             ]}
           >
-            <IconSymbol name="dollarsign.circle" size={24} color="white" />
+            <IconSymbol 
+              name={regionConfig.currency.code === 'USD' ? 'dollarsign.circle' : 'creditcard'} 
+              size={24} 
+              color="white" 
+            />
             <ThemedText style={styles.summaryValue}>
-              ${yearlyTotal.toFixed(0)}
+              {formatCurrency(yearlyTotal, regionConfig)}
             </ThemedText>
             <ThemedText style={styles.summaryLabel}>This Year</ThemedText>
           </View>

@@ -1,27 +1,29 @@
-import React, { useState, useEffect } from 'react';
-import {
-  StyleSheet,
-  ScrollView,
-  View,
-  TouchableOpacity,
-  Alert,
-  RefreshControl,
-} from 'react-native';
+import { FuelEntryCard } from '@/components/fuel/FuelEntryCard';
+import { FuelSearchFilter } from '@/components/fuel/FuelSearchFilter';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { useColorScheme } from '@/hooks/use-color-scheme';
-import { Colors, Spacing, Typography } from '@/constants/theme';
 import { IconSymbol } from '@/components/ui/icon-symbol';
-import { FuelEntry, Vehicle, FuelSearchFilter as FuelSearchFilterType } from '@/types/data';
+import { Colors, Spacing, Typography } from '@/constants/theme';
+import { useColorScheme } from '@/hooks/use-color-scheme';
+import { formatCurrency, useRegion } from '@/hooks/use-region';
 import { FuelService, VehicleService } from '@/services/index';
-import { FuelSearchFilter } from '@/components/fuel/FuelSearchFilter';
-import { FuelEntryCard } from '@/components/fuel/FuelEntryCard';
-import { useRouter, useFocusEffect } from 'expo-router';
+import { FuelEntry, FuelSearchFilter as FuelSearchFilterType, Vehicle } from '@/types/data';
+import { useFocusEffect, useRouter } from 'expo-router';
+import React, { useEffect, useState } from 'react';
+import {
+    Alert,
+    RefreshControl,
+    ScrollView,
+    StyleSheet,
+    TouchableOpacity,
+    View,
+} from 'react-native';
 
 export default function FuelScreen() {
   const router = useRouter();
   const colorScheme = useColorScheme() ?? 'light';
   const colors = Colors[colorScheme];
+  const { regionConfig } = useRegion();
   const [fuelEntries, setFuelEntries] = useState<FuelEntry[]>([]);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [loading, setLoading] = useState(false);
@@ -220,7 +222,7 @@ export default function FuelScreen() {
           >
             <IconSymbol name="fuelpump.fill" size={24} color="white" />
             <ThemedText style={styles.summaryValue}>
-              ${monthlyTotal.toFixed(2)}
+              {formatCurrency(monthlyTotal, regionConfig)}
             </ThemedText>
             <ThemedText style={styles.summaryLabel}>This Month</ThemedText>
           </View>
@@ -234,7 +236,7 @@ export default function FuelScreen() {
             <ThemedText style={styles.summaryValue}>
               {avgMPG !== null ? avgMPG.toFixed(1) : 'N/A'}
             </ThemedText>
-            <ThemedText style={styles.summaryLabel}>Avg MPG</ThemedText>
+            <ThemedText style={styles.summaryLabel}>Avg {regionConfig.efficiency.label}</ThemedText>
           </View>
         </View>
 
