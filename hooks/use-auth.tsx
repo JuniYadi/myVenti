@@ -1,8 +1,8 @@
+import { GOOGLE_SIGN_IN_CONFIG } from '@/constants/firebase';
+import { auth } from '@/firebase';
 import { GoogleSignin, statusCodes } from '@react-native-google-signin/google-signin';
 import { createUserWithEmailAndPassword, signOut as firebaseSignOut, GoogleAuthProvider, onAuthStateChanged, signInWithCredential, signInWithEmailAndPassword, User } from 'firebase/auth';
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { GOOGLE_SIGN_IN_CONFIG } from '../constants/firebase';
-import { auth } from '../firebase';
 
 interface AuthContextType {
   user: User | null;
@@ -90,7 +90,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       await GoogleSignin.hasPlayServices();
 
       // Sign in with Google
-      const { idToken } = await GoogleSignin.signIn();
+      const result = await GoogleSignin.signIn();
+      const idToken = result.data?.idToken;
+
+      if (!idToken) {
+        throw new Error('Failed to get ID token from Google Sign-In');
+      }
 
       // Create Google credential
       const googleCredential = GoogleAuthProvider.credential(idToken);
