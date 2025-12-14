@@ -3,26 +3,26 @@
  * Provides visual charts, trend analysis, and vehicle comparison for fuel management
  */
 
-import React, { useState, useEffect } from 'react';
-import {
-  View,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  Alert,
-  ActivityIndicator,
-  Platform,
-} from 'react-native';
-import { Stack, useRouter, useLocalSearchParams } from 'expo-router';
+import { ChartConfig, FuelAnalyticsChart } from '@/components/fuel/FuelAnalyticsChart';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { IconSymbol } from '@/components/ui/icon-symbol';
-import { FuelAnalyticsChart, ChartConfig, VehicleData } from '@/components/fuel/FuelAnalyticsChart';
-import { FuelEntry, Vehicle } from '@/types/data';
-import { FuelService, VehicleService } from '@/services/index';
-import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Colors } from '@/constants/theme';
+import { useColorScheme } from '@/hooks/use-color-scheme';
+import { FuelService, VehicleService } from '@/services/index';
+import { FuelEntry, Vehicle } from '@/types/data';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
+import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
+import React, { useEffect, useState } from 'react';
+import {
+    ActivityIndicator,
+    Alert,
+    Platform,
+    ScrollView,
+    StyleSheet,
+    TouchableOpacity,
+    View,
+} from 'react-native';
 
 interface AnalyticsData {
   monthlyStats: {
@@ -56,6 +56,7 @@ export default function FuelAnalyticsScreen() {
 
   const colorScheme = useColorScheme() || 'light';
   const colors = Colors[colorScheme];
+  const { regionConfig } = useRegion();
 
   const [loading, setLoading] = useState(true);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
