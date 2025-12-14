@@ -3,26 +3,26 @@
  * Features swipe gestures, edit/delete actions with haptic feedback, and vehicle-specific formatting
  */
 
-import React, { useRef } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  Animated,
-} from 'react-native';
-import {
-  PanGestureHandler,
-  PanGestureHandlerGestureEvent,
-  State,
-} from 'react-native-gesture-handler';
 import { ThemedText } from '@/components/themed-text';
 import { IconSymbol } from '@/components/ui/icon-symbol';
-import type { ServiceRecord, Vehicle } from '@/types/data';
-import { useColorScheme } from '@/hooks/use-color-scheme';
-import { useRegion, formatCurrency, convertDistance } from '@/hooks/use-region';
 import { Colors } from '@/constants/theme';
+import { useColorScheme } from '@/hooks/use-color-scheme';
+import { convertDistance, formatCurrency, useRegion } from '@/hooks/use-region';
+import type { ServiceRecord, Vehicle } from '@/types/data';
 import * as Haptics from 'expo-haptics';
+import React, { useRef } from 'react';
+import {
+    Animated,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
+} from 'react-native';
+import {
+    PanGestureHandler,
+    PanGestureHandlerGestureEvent,
+    State,
+} from 'react-native-gesture-handler';
 
 interface ServiceRecordCardProps {
   serviceRecord: ServiceRecord;
@@ -278,7 +278,12 @@ export function ServiceRecordCard({ serviceRecord, vehicle, onEdit, onDelete, on
                 <ThemedText style={styles.vehicleName}>{vehicle.name}</ThemedText>
               </View>
               <ThemedText style={styles.date}>{formatDate()}</ThemedText>
-              <ThemedText style={styles.mileage}>{serviceRecord.mileage.toLocaleString()} mi</ThemedText>
+              <ThemedText style={styles.mileage}>
+                {regionConfig.distance.unit === 'kilometers' 
+                  ? `${convertDistance(serviceRecord.mileage, 'miles', 'kilometers').toLocaleString()} ${regionConfig.distance.abbreviation}`
+                  : `${serviceRecord.mileage.toLocaleString()} ${regionConfig.distance.abbreviation}`
+                }
+              </ThemedText>
             </View>
 
             {/* Notes section if present */}

@@ -3,20 +3,19 @@
  * Optimized for list views with efficient space usage and clear information hierarchy
  */
 
-import React from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  Alert,
-} from 'react-native';
 import { ThemedText } from '@/components/themed-text';
 import { IconSymbol } from '@/components/ui/icon-symbol';
-import type { ServiceRecord, Vehicle } from '@/types/data';
-import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Colors } from '@/constants/theme';
+import { useColorScheme } from '@/hooks/use-color-scheme';
+import { convertDistance, formatCurrency, useRegion } from '@/hooks/use-region';
+import type { ServiceRecord, Vehicle } from '@/types/data';
 import * as Haptics from 'expo-haptics';
+import React from 'react';
+import {
+  StyleSheet,
+  TouchableOpacity,
+  View
+} from 'react-native';
 
 interface ServiceListItemProps {
   serviceRecord: ServiceRecord;
@@ -29,6 +28,7 @@ interface ServiceListItemProps {
 export function ServiceListItem({ serviceRecord, vehicle, onEdit, onDelete, onPress }: ServiceListItemProps) {
   const colorScheme = useColorScheme() || 'light';
   const colors = Colors[colorScheme];
+  const { regionConfig } = useRegion();
 
   // Format helpers
   const formatDate = () => {
@@ -58,7 +58,7 @@ export function ServiceListItem({ serviceRecord, vehicle, onEdit, onDelete, onPr
   const getServiceColor = () => {
     const lowerType = serviceRecord.type.toLowerCase();
     if (lowerType.includes('oil')) return colors.warning;
-    if (lowerType.includes('tire')) return colors.info;
+    if (lowerType.includes('tire')) return colors.secondary;
     if (lowerType.includes('brake')) return colors.error;
     if (lowerType.includes('battery')) return colors.success;
     if (lowerType.includes('inspection')) return colors.primary;
@@ -162,7 +162,10 @@ export function ServiceListItem({ serviceRecord, vehicle, onEdit, onDelete, onPr
                 {formatDate()}
               </ThemedText>
               <ThemedText style={[styles.mileage, { color: colors.icon }]}>
-                {serviceRecord.mileage.toLocaleString()} mi
+                {regionConfig.distance.unit === 'kilometers' 
+                  ? `${convertDistance(serviceRecord.mileage, 'miles', 'kilometers').toLocaleString()} ${regionConfig.distance.abbreviation}`
+                  : `${serviceRecord.mileage.toLocaleString()} ${regionConfig.distance.abbreviation}`
+                }
               </ThemedText>
             </View>
           </View>
@@ -170,7 +173,7 @@ export function ServiceListItem({ serviceRecord, vehicle, onEdit, onDelete, onPr
           {/* Cost and actions */}
           <View style={styles.rightSection}>
             <ThemedText style={[styles.cost, { color: colors.primary }]}>
-              ${serviceRecord.cost.toFixed(2)}
+              {formatCurrency(serviceRecord.cost, regionConfig)}
             </ThemedText>
 
             {/* Action buttons */}
