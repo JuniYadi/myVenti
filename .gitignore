@@ -44,4 +44,4 @@ app-example
 bug
 
 # ignore
-firebase.ts
+.env
