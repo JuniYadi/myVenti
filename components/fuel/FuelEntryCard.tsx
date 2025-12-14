@@ -3,26 +3,25 @@
  * Features swipe gestures, edit/delete actions with haptic feedback, and vehicle-specific formatting
  */
 
+import { IconSymbol } from '@/components/ui/icon-symbol';
+import { Colors } from '@/constants/theme';
+import { useColorScheme } from '@/hooks/use-color-scheme';
+import { convertVolume, formatCurrency, useRegion } from '@/hooks/use-region';
+import type { FuelEntry, Vehicle } from '@/types/data';
+import * as Haptics from 'expo-haptics';
 import React, { useRef } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
   Animated,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import {
   PanGestureHandler,
   PanGestureHandlerGestureEvent,
   State,
 } from 'react-native-gesture-handler';
-import { ThemedText } from '@/components/themed-text';
-import { IconSymbol } from '@/components/ui/icon-symbol';
-import type { FuelEntry, Vehicle } from '@/types/data';
-import { useColorScheme } from '@/hooks/use-color-scheme';
-import { useRegion, formatCurrency, convertVolume, convertDistance } from '@/hooks/use-region';
-import { Colors } from '@/constants/theme';
-import * as Haptics from 'expo-haptics';
 
 interface FuelEntryCardProps {
   entry: FuelEntry;
@@ -58,6 +57,21 @@ export function FuelEntryCard({ entry, vehicle, onEdit, onDelete, onPress }: Fue
     }
 
     return vehicle.type === 'electric' ? `${entry.quantity.toFixed(2)} kWh` : `${quantity.toFixed(2)} ${unit}`;
+  };
+
+  const formatPricePerUnit = () => {
+    if (vehicle.type === 'electric') {
+      return formatCurrency(entry.pricePerUnit, regionConfig);
+    }
+    
+    // Price is stored per gallon, convert to user's preferred unit for display
+    let pricePerUnit = entry.pricePerUnit;
+    if (regionConfig.volume.unit === 'liters') {
+      // Convert price per gallon to price per liter
+      pricePerUnit = entry.pricePerUnit / 3.78541;
+    }
+    
+    return formatCurrency(pricePerUnit, regionConfig);
   };
 
   const formatPriceLabel = () => {
@@ -247,7 +261,7 @@ export function FuelEntryCard({ entry, vehicle, onEdit, onDelete, onPress }: Fue
               {/* Single line with quantity and price */}
               <View style={styles.compactSubHeader}>
                 <Text style={styles.compactQuantity}>{formatQuantity()}</Text>
-                <Text style={styles.compactPrice}>• {formatCurrency(entry.pricePerUnit, regionConfig)}/{vehicle.type === 'electric' ? 'kWh' : regionConfig.volume.abbreviation}</Text>
+                <Text style={styles.compactPrice}>• {formatPricePerUnit()}/{vehicle.type === 'electric' ? 'kWh' : regionConfig.volume.abbreviation}</Text>
               </View>
 
               {entry.fuelStation && (

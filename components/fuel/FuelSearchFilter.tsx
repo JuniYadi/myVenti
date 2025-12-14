@@ -3,22 +3,22 @@
  * Provides search input with debouncing, date range picker, price range slider, and vehicle selection
  */
 
-import React, { useState, useCallback, useMemo } from 'react';
-import {
-  View,
-  TextInput,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  Platform,
-} from 'react-native';
-import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { IconSymbol } from '@/components/ui/icon-symbol';
-import type { FuelSearchFilter, Vehicle } from '@/types/data';
-import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Colors } from '@/constants/theme';
+import { useColorScheme } from '@/hooks/use-color-scheme';
+import type { FuelSearchFilter, Vehicle } from '@/types/data';
+import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
+import React, { useCallback, useMemo, useState } from 'react';
+import {
+    Platform,
+    ScrollView,
+    StyleSheet,
+    TextInput,
+    TouchableOpacity,
+    View,
+} from 'react-native';
 
 interface FuelSearchFilterProps {
   filter: FuelSearchFilter;
@@ -27,6 +27,7 @@ interface FuelSearchFilterProps {
 }
 
 export function FuelSearchFilter({ filter, onFilterChange, vehicles }: FuelSearchFilterProps) {
+  const { regionConfig } = useRegion();
   const [searchTerm, setSearchTerm] = useState(filter.fuelStation || '');
   const [showStartDatePicker, setShowStartDatePicker] = useState(false);
   const [showEndDatePicker, setShowEndDatePicker] = useState(false);
@@ -236,7 +237,7 @@ export function FuelSearchFilter({ filter, onFilterChange, vehicles }: FuelSearc
 
         {/* Price Range */}
         <ThemedView style={styles.section}>
-          <ThemedText style={styles.sectionTitle}>Price Range ($)</ThemedText>
+          <ThemedText style={styles.sectionTitle}>Price Range ({regionConfig.currency.symbol})</ThemedText>
           <View style={styles.priceContainer}>
             <View style={styles.priceInputContainer}>
               <ThemedText style={styles.priceLabel}>Min:</ThemedText>
