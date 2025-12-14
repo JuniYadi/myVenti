@@ -3,17 +3,17 @@
  * Provides centralized data management using AsyncStorage for local persistence
  */
 
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
-  Vehicle,
-  FuelEntry,
-  ServiceRecord,
-  VehicleFormData,
-  FuelFormData,
-  ServiceFormData,
-  DashboardSummary,
-  RecentActivity,
+    DashboardSummary,
+    FuelEntry,
+    FuelFormData,
+    RecentActivity,
+    ServiceFormData,
+    ServiceRecord,
+    Vehicle,
+    VehicleFormData,
 } from '@/types/data';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Storage keys
 const STORAGE_KEYS = {
@@ -974,7 +974,7 @@ export class DashboardService {
           id: entry.id,
           type: 'fuel' as const,
           title: 'Fuel Fill-up',
-          subtitle: `$${entry.amount.toFixed(2)}`,
+          subtitle: `Rp ${entry.amount.toLocaleString('id-ID')}`,
           time: this.formatRelativeTime(entry.createdAt),
           icon: 'fuelpump.fill',
           color: '#007AFF', // Using blue as primary color
@@ -983,7 +983,7 @@ export class DashboardService {
           id: record.id,
           type: 'service' as const,
           title: record.type,
-          subtitle: `$${record.cost.toFixed(2)}`,
+          subtitle: `Rp ${record.cost.toLocaleString('id-ID')}`,
           time: this.formatRelativeTime(record.createdAt),
           icon: 'wrench.fill',
           color: '#34C759', // Using green as success color
