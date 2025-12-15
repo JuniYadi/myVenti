@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import React, { useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { Alert, StyleSheet, View } from 'react-native';
 
 import { AuthButton } from '../components/auth/auth-button';
 import { AuthInput } from '../components/auth/auth-input';
@@ -10,15 +10,15 @@ import { ThemedText } from '../components/themed-text';
 import { ThemedView } from '../components/themed-view';
 import { useAuth } from '../hooks/use-auth';
 
-export default function LoginScreen() {
+export default function ResetPasswordScreen() {
   const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
+  const [errors, setErrors] = useState<{ email?: string }>({});
+  const [isEmailSent, setIsEmailSent] = useState(false);
 
-  const { signIn, loading, error, signInWithGoogle, clearError } = useAuth();
+  const { resetPassword, loading, error, clearError } = useAuth();
 
   const validateForm = () => {
-    const newErrors: { email?: string; password?: string } = {};
+    const newErrors: { email?: string } = {};
 
     if (!email.trim()) {
       newErrors.email = 'Email is required';
@@ -26,27 +26,21 @@ export default function LoginScreen() {
       newErrors.email = 'Email is invalid';
     }
 
-    if (!password) {
-      newErrors.password = 'Password is required';
-    }
-
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSignIn = async () => {
+  const handleResetPassword = async () => {
     if (!validateForm()) return;
 
     try {
-      await signIn(email, password);
-    } catch (error) {
-      // Error is handled by the useAuth hook
-    }
-  };
-
-  const handleGoogleSignIn = async () => {
-    try {
-      await signInWithGoogle();
+      await resetPassword(email);
+      setIsEmailSent(true);
+      Alert.alert(
+        'Reset Email Sent',
+        'Check your email for instructions to reset your password.',
+        [{ text: 'OK' }]
+      );
     } catch (error) {
       // Error is handled by the useAuth hook
     }
@@ -57,12 +51,54 @@ export default function LoginScreen() {
     router.back();
   };
 
+  const handleBackToLogin = () => {
+    clearError();
+    router.replace('/login');
+  };
+
+  if (isEmailSent) {
+    return (
+      <ThemedView style={styles.container}>
+        <View style={styles.header}>
+          <Ionicons name="mail-outline" size={64} color="#4CAF50" style={styles.icon} />
+          <ThemedText type="title">Check Your Email</ThemedText>
+          <ThemedText style={styles.subtitle}>
+            We've sent a password reset link to {email}
+          </ThemedText>
+        </View>
+
+        <View style={styles.form}>
+          <ThemedText style={styles.instructions}>
+            Click the link in your email to reset your password. If you don't see the email, check your spam folder.
+          </ThemedText>
+
+          <AuthButton
+            title="Resend Email"
+            onPress={handleResetPassword}
+            loading={loading}
+            disabled={loading}
+            variant="secondary"
+          />
+        </View>
+
+        <View style={styles.footer}>
+          <AuthButton
+            title="Back to Login"
+            onPress={handleBackToLogin}
+            variant="primary"
+          />
+        </View>
+      </ThemedView>
+    );
+  }
+
   return (
     <ThemedView style={styles.container}>
       <View style={styles.header}>
-        <ThemedText type="title">Welcome Back</ThemedText>
+        <Ionicons name="lock-closed-outline" size={64} color="#FF9800" style={styles.icon} />
+        <ThemedText type="title">Reset Password</ThemedText>
         <ThemedText style={styles.subtitle}>
-          Sign in to continue tracking your fuel expenses
+          Enter your email address and we'll send you a link to reset your password
         </ThemedText>
       </View>
 
@@ -80,40 +116,19 @@ export default function LoginScreen() {
           error={errors.email}
         />
 
-        <AuthInput
-          label="Password"
-          value={password}
-          onChangeText={setPassword}
-          placeholder="Enter your password"
-          secureTextEntry
-          error={errors.password}
-        />
-
         <AuthButton
-          title="Sign In"
-          onPress={handleSignIn}
+          title="Send Reset Email"
+          onPress={handleResetPassword}
           loading={loading}
           disabled={loading}
         />
-
-        <AuthButton
-          title="Sign in with Google"
-          onPress={handleGoogleSignIn}
-          variant="google"
-          disabled={loading}
-          icon={<Ionicons name="logo-google" size={20} color="#4285F4" />}
-        />
-
-        <ThemedText style={styles.forgotPassword} onPress={() => router.push('/reset-password')}>
-          Forgot your password?
-        </ThemedText>
       </View>
 
       <View style={styles.footer}>
         <ThemedText style={styles.footerText}>
-          Don't have an account?{' '}
-          <ThemedText style={styles.link} onPress={() => router.push('/signup')}>
-            Sign Up
+          Remember your password?{' '}
+          <ThemedText style={styles.link} onPress={() => router.push('/login')}>
+            Sign In
           </ThemedText>
         </ThemedText>
 
@@ -137,6 +152,9 @@ const styles = StyleSheet.create({
     marginTop: 40,
     marginBottom: 40,
   },
+  icon: {
+    marginBottom: 16,
+  },
   subtitle: {
     textAlign: 'center',
     marginTop: 8,
@@ -145,6 +163,12 @@ const styles = StyleSheet.create({
   form: {
     flex: 1,
     justifyContent: 'flex-start',
+  },
+  instructions: {
+    textAlign: 'center',
+    marginBottom: 24,
+    opacity: 0.8,
+    lineHeight: 20,
   },
   footer: {
     paddingBottom: 20,
@@ -157,12 +181,5 @@ const styles = StyleSheet.create({
   link: {
     fontWeight: '600',
     textDecorationLine: 'underline',
-  },
-  forgotPassword: {
-    textAlign: 'center',
-    marginTop: 16,
-    fontSize: 16,
-    textDecorationLine: 'underline',
-    opacity: 0.8,
   },
 });
