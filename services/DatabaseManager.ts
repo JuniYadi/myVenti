@@ -1,9 +1,16 @@
-import { Platform } from 'react-native';
 
 // Type definitions for SQLite to avoid import errors
+interface SQLiteRunResult {
+  lastInsertRowId: number;
+  changes: number;
+}
+
 interface SQLiteDatabase {
   closeAsync(): Promise<void>;
-  execAsync(props: { args: any[]; sql: string }[]): Promise<any[]>;
+  execAsync(sql: string): Promise<void>;
+  runAsync(sql: string, params?: any[]): Promise<SQLiteRunResult>;
+  getAllAsync<T = any>(sql: string, params?: any[]): Promise<T[]>;
+  getFirstAsync<T = any>(sql: string, params?: any[]): Promise<T | null>;
 }
 
 interface SQLiteStatic {
@@ -42,7 +49,8 @@ export class DatabaseManager {
 
     // Check if SQLite is available by trying to import it dynamically
     try {
-      const SQLiteModule = require('expo-sqlite');
+      // Use dynamic import instead of require for better error handling
+      const SQLiteModule = await import('expo-sqlite');
       this.SQLite = SQLiteModule.default || SQLiteModule;
       this.isSQLiteAvailable = true;
       console.log('SQLite module loaded successfully');
@@ -59,8 +67,14 @@ export class DatabaseManager {
         this.database = await this.SQLite.openDatabaseAsync(this.DB_NAME);
         console.log('SQLite database opened successfully');
 
-        // Enable foreign keys
-        await this.executeSql('PRAGMA foreign_keys = ON');
+        // Enable foreign keys (optional, continue if it fails)
+        try {
+          await this.executeSql('PRAGMA foreign_keys = ON');
+          console.log('Foreign keys enabled successfully');
+        } catch (pragmaError) {
+          console.warn('Failed to enable foreign keys (continuing anyway):', pragmaError);
+          // Continue without foreign keys - not critical for basic functionality
+        }
 
         // Create tables
         await this.createTables();
@@ -206,28 +220,47 @@ export class DatabaseManager {
     }
 
     try {
-      const result = await this.database.execAsync([{ args: params || [], sql: query }]);
+      const trimmedQuery = query.trim().toLowerCase();
 
-      // Transform the result to match expected format
-      const transformedResult: DatabaseResult = {
-        rowsAffected: 0
-      };
-
-      for (const statement of result) {
-        if (statement.rows) {
-          transformedResult.rows = statement.rows;
-          transformedResult.rowsAffected = statement.rowsAffected || 0;
-        }
-        if (statement.insertId) {
-          transformedResult.insertId = statement.insertId;
+      // Determine query type and use appropriate method
+      if (trimmedQuery.startsWith('select')) {
+        // SELECT queries - use getAllAsync
+        const rows = await this.database.getAllAsync(query, params || []);
+        return {
+          rows: rows,
+          rowsAffected: rows.length
+        };
+      } else if (
+        trimmedQuery.startsWith('insert') ||
+        trimmedQuery.startsWith('update') ||
+        trimmedQuery.startsWith('delete')
+      ) {
+        // INSERT/UPDATE/DELETE - use runAsync
+        const result = await this.database.runAsync(query, params || []);
+        return {
+          insertId: result.lastInsertRowId,
+          rowsAffected: result.changes
+        };
+      } else {
+        // DDL statements (CREATE, DROP, PRAGMA, etc.) - use execAsync
+        // Note: execAsync doesn't support parameters, so we substitute them manually if needed
+        if (params && params.length > 0) {
+          // For PRAGMA and other statements that might have params, use runAsync
+          const result = await this.database.runAsync(query, params);
+          return {
+            rowsAffected: result.changes
+          };
+        } else {
+          await this.database.execAsync(query);
+          return {
+            rowsAffected: 0
+          };
         }
       }
-
-      return transformedResult;
     } catch (error) {
       console.error('SQL execution error:', error);
       console.error('Query:', query);
-      console.error('Params:', params);
+      console.error('Params:', params || 'undefined');
       // If SQL execution fails, fall back to memory storage
       console.warn('Falling back to memory storage due to SQL execution error');
       this.isSQLiteAvailable = false;

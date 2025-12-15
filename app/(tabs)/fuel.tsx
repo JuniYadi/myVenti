@@ -8,6 +8,7 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
 import { formatCurrency, useRegion } from '@/hooks/use-region';
 import { FuelService, VehicleService } from '@/services/index';
 import { FuelEntry, FuelSearchFilter as FuelSearchFilterType, Vehicle } from '@/types/data';
+import { SeedDataService } from '@/utils/seedData';
 import { useFocusEffect, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
@@ -51,6 +52,11 @@ export default function FuelScreen() {
     try {
       setLoading(true);
       console.log('Loading fuel data...');
+
+      // Ensure database is initialized
+      const { DatabaseManager } = await import('@/services/DatabaseManager');
+      await DatabaseManager.getInstance().initDatabase();
+
       const [entries, vehicleList, monthlyCost] = await Promise.all([
         FuelService.getAll(),
         VehicleService.getAll(),
@@ -59,15 +65,29 @@ export default function FuelScreen() {
 
       console.log('Loaded entries:', entries.length);
       console.log('Loaded vehicles:', vehicleList.length);
+      console.log('Vehicle details:', vehicleList);
       console.log('Monthly cost:', monthlyCost);
 
+      // Add sample data if needed
+      if (vehicleList.length === 0) {
+        console.log('No vehicles found, adding sample data...');
+        await SeedDataService.addSampleVehiclesIfNeeded();
+
+        // Reload vehicles after adding sample data
+        const updatedVehicles = await VehicleService.getAll();
+        console.log('Updated vehicles after seeding:', updatedVehicles);
+        setVehicles(updatedVehicles);
+      } else {
+        setVehicles(vehicleList);
+      }
+
       setFuelEntries(entries);
-      setVehicles(vehicleList);
       setMonthlyTotal(monthlyCost);
 
       // Calculate average MPG for gas vehicles only
+      const currentVehicles = vehicles.length > 0 ? vehicles : vehicleList;
       const gasEntries = entries.filter(entry => {
-        const vehicle = vehicleList.find(v => v.id === entry.vehicleId);
+        const vehicle = currentVehicles.find(v => v.id === entry.vehicleId);
         return vehicle && vehicle.type !== 'electric' && entry.mpg && entry.mpg > 0;
       });
 

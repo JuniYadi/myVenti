@@ -2,11 +2,13 @@
  * App initialization component that handles migration from AsyncStorage to SQLite
  */
 
-import React, { useEffect, useState } from 'react';
-import { Platform, View, Text, ActivityIndicator, StyleSheet } from 'react-native';
-import { MigrationService } from '@/services/MigrationService';
 import { DatabaseManager } from '@/services/DatabaseManager';
+import { MigrationService } from '@/services/MigrationService';
 import SafeAsyncStorage from '@/utils/asyncStorageWrapper';
+import { checkModuleAvailability, logModuleStatus } from '@/utils/moduleChecker';
+import { runAllModuleTests } from '@/utils/moduleTest';
+import React, { useEffect, useState } from 'react';
+import { ActivityIndicator, Platform, StyleSheet, Text, View } from 'react-native';
 
 interface AppInitializerProps {
   children: React.ReactNode;
@@ -23,6 +25,27 @@ export function AppInitializer({ children }: AppInitializerProps) {
 
   const initializeApp = async () => {
     try {
+      setMigrationProgress('Checking module availability...');
+
+      // Check if required modules are available
+      const moduleAvailability = await checkModuleAvailability();
+      logModuleStatus(moduleAvailability);
+
+      // Run comprehensive module tests
+      const testResults = await runAllModuleTests();
+
+      if (moduleAvailability.errors.length > 0) {
+        console.warn('Some modules are not available, but continuing with fallbacks');
+      }
+
+      // Log test results for debugging
+      if (!testResults.sqlite.success) {
+        console.warn('SQLite test failed, will use fallback storage');
+      }
+      if (!testResults.asyncStorage.success) {
+        console.warn('AsyncStorage test failed, will use fallback storage');
+      }
+
       setMigrationProgress('Initializing storage...');
 
       // First, test SafeAsyncStorage availability on native platforms

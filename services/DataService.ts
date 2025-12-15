@@ -44,14 +44,18 @@ export class VehicleService {
   static async getAll(): Promise<Vehicle[]> {
     try {
       const db = DatabaseManager.getInstance();
+      console.log('VehicleService: Attempting to load vehicles from database...');
       const result = await db.executeSql(
         `SELECT id, name, year, make, model, type, status, created_at as createdAt, updated_at as updatedAt
          FROM vehicles
          ORDER BY created_at DESC`
       );
-      return DatabaseManager.mapRowsToArray<Vehicle>(result.rows);
+      const vehicles = DatabaseManager.mapRowsToArray<Vehicle>(result.rows);
+      console.log('VehicleService: Successfully loaded vehicles:', vehicles.length);
+      return vehicles;
     } catch (error) {
       handleStorageError(error, 'VehicleService.getAll');
+      console.error('VehicleService: Failed to load vehicles:', error);
       return [];
     }
   }

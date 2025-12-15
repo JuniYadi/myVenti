@@ -66,10 +66,20 @@ const initializeAsyncStorage = async (): Promise<void> => {
   // For native platforms, try to import AsyncStorage
   try {
     console.log('Initializing AsyncStorage...');
-    const AsyncStorage = await import('@react-native-async-storage/async-storage');
+    
+    // Try different import methods for better compatibility
+    let AsyncStorage;
+    try {
+      // First try the standard import
+      AsyncStorage = await import('@react-native-async-storage/async-storage');
+    } catch (importError) {
+      console.warn('Standard import failed, trying require fallback:', importError);
+      // Fallback to require if dynamic import fails
+      AsyncStorage = (require as any)('@react-native-async-storage/async-storage');
+    }
 
-    if (AsyncStorage && AsyncStorage.default) {
-      AsyncStorageInstance = AsyncStorage.default;
+    if (AsyncStorage && (AsyncStorage.default || AsyncStorage)) {
+      AsyncStorageInstance = AsyncStorage.default || AsyncStorage;
       isInitialized = true;
       console.log('AsyncStorage initialized successfully');
     } else {
