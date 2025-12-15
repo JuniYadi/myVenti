@@ -1,8 +1,22 @@
-import { GoogleSignin, statusCodes } from '@react-native-google-signin/google-signin';
-import { createUserWithEmailAndPassword, signOut as firebaseSignOut, GoogleAuthProvider, onAuthStateChanged, signInWithCredential, signInWithEmailAndPassword, User } from 'firebase/auth';
+import { createUserWithEmailAndPassword, signOut as firebaseSignOut, GoogleAuthProvider, onAuthStateChanged, sendPasswordResetEmail, signInWithCredential, signInWithEmailAndPassword, User } from 'firebase/auth';
 import React, { createContext, useContext, useEffect, useState } from 'react';
+import { Platform } from 'react-native';
 import { GOOGLE_SIGN_IN_CONFIG } from '../constants/firebase';
 import { auth } from '../firebase';
+
+// Conditionally import Google Sign-in only for native platforms
+let GoogleSignin: any = null;
+let statusCodes: any = null;
+
+if (Platform.OS !== 'web') {
+  try {
+    const googleSigninModule = require('@react-native-google-signin/google-signin');
+    GoogleSignin = googleSigninModule.GoogleSignin;
+    statusCodes = googleSigninModule.statusCodes;
+  } catch (error) {
+    console.warn('Google Sign-in not available:', error);
+  }
+}
 
 interface AuthContextType {
   user: User | null;
@@ -12,6 +26,7 @@ interface AuthContextType {
   signIn: (email: string, password: string) => Promise<void>;
   signInWithGoogle: () => Promise<void>;
   signOut: () => Promise<void>;
+  resetPassword: (email: string) => Promise<void>;
   clearError: () => void;
 }
 
@@ -24,11 +39,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isInitialized, setIsInitialized] = useState(false);
 
   useEffect(() => {
-    // Configure Google Sign-In
-    GoogleSignin.configure({
-      webClientId: GOOGLE_SIGN_IN_CONFIG.webClientId,
-      offlineAccess: true,
-    });
+    // Configure Google Sign-In only if available
+    if (GoogleSignin) {
+      try {
+        GoogleSignin.configure({
+          webClientId: GOOGLE_SIGN_IN_CONFIG.webClientId,
+          offlineAccess: true,
+        });
+      } catch (error) {
+        console.warn('Failed to configure Google Sign-in:', error);
+      }
+    }
 
     // Listen for auth state changes using the imported function
     const unsubscribe = onAuthStateChanged(auth, (authUser) => {
@@ -82,6 +103,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signInWithGoogle = async () => {
+    if (!GoogleSignin) {
+      setError('Google Sign-in is not available on this platform');
+      throw new Error('Google Sign-in not available');
+    }
+
     try {
       setError(null);
       setLoading(true);
@@ -105,13 +131,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch (err: any) {
       setLoading(false);
 
-      if (err.code === statusCodes.SIGN_IN_CANCELLED) {
+      if (statusCodes && err.code === statusCodes.SIGN_IN_CANCELLED) {
         // User cancelled the sign-in
         return;
-      } else if (err.code === statusCodes.IN_PROGRESS) {
+      } else if (statusCodes && err.code === statusCodes.IN_PROGRESS) {
         // Operation is already in progress
         return;
-      } else if (err.code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) {
+      } else if (statusCodes && err.code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) {
         setError('Google Play Services not available');
       } else {
         setError(getAuthErrorMessage(err.code));
@@ -123,10 +149,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signOut = async () => {
     try {
       setError(null);
-      await GoogleSignin.signOut();
+      if (GoogleSignin) {
+        await GoogleSignin.signOut();
+      }
       await firebaseSignOut(auth);
     } catch (err: any) {
       setError(getAuthErrorMessage(err.code));
+      throw err;
+    }
+  };
+
+  const resetPassword = async (email: string) => {
+    try {
+      setError(null);
+      setLoading(true);
+      await sendPasswordResetEmail(auth, email);
+      setLoading(false);
+    } catch (err: any) {
+      setError(getAuthErrorMessage(err.code));
+      setLoading(false);
       throw err;
     }
   };
@@ -143,6 +184,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     signIn,
     signInWithGoogle,
     signOut,
+    resetPassword,
     clearError,
   };
 
