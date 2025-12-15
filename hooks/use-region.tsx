@@ -28,14 +28,24 @@ export function RegionProvider({ children }: RegionProviderProps) {
   useEffect(() => {
     let isMounted = true;
 
-    loadRegionPreference().catch(error => {
-      if (isMounted) {
+    const initRegion = async () => {
+      try {
+        await loadRegionPreference();
+      } catch (error) {
         console.error('Failed to load region preference:', error);
-        setHasError(true);
-        setCurrentRegion(DEFAULT_REGION);
-        setIsLoading(false);
+        if (isMounted) {
+          setHasError(true);
+          // Always use default region on error
+          setCurrentRegion(DEFAULT_REGION);
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoading(false);
+        }
       }
-    });
+    };
+
+    initRegion();
 
     return () => {
       isMounted = false;
@@ -43,50 +53,41 @@ export function RegionProvider({ children }: RegionProviderProps) {
   }, []);
 
   const loadRegionPreference = async () => {
+    // Initialize database without throwing errors
+    const db = DatabaseManager.getInstance();
+
+    // Try to initialize but don't let errors propagate
     try {
-      // Ensure database is initialized with retry logic
-      const db = DatabaseManager.getInstance();
-      let retryCount = 0;
-      const maxRetries = 3;
+      await db.initDatabase();
+    } catch (error) {
+      // DatabaseManager now handles errors internally
+      console.warn('Database initialization issue (using fallback):', error);
+    }
 
-      while (retryCount < maxRetries) {
-        try {
-          await db.initDatabase();
-          break;
-        } catch (initError) {
-          retryCount++;
-          if (retryCount >= maxRetries) {
-            throw initError;
-          }
-          // Wait a bit before retrying
-          await new Promise(resolve => setTimeout(resolve, 500));
-        }
-      }
-
+    // Try to load region from database
+    try {
       const result = await db.executeSql('SELECT value FROM app_settings WHERE key = ?', ['region']);
 
       if (result.rows && result.rows.length > 0) {
         const savedRegion = result.rows[0].value;
         if (savedRegion && savedRegion in REGION_CONFIGS) {
           setCurrentRegion(savedRegion as RegionCode);
+          return;
         } else {
           // Update with default region if invalid
           await db.executeSql(
             'UPDATE app_settings SET value = ?, updated_at = CURRENT_TIMESTAMP WHERE key = ?',
             [DEFAULT_REGION, 'region']
           );
-          setCurrentRegion(DEFAULT_REGION);
         }
-      } else {
-        // Default region should already be inserted during DB initialization
-        setCurrentRegion(DEFAULT_REGION);
       }
     } catch (error) {
-      console.error('Error loading region preference:', error);
-      // Don't set hasError here, just use fallback
-      setCurrentRegion(DEFAULT_REGION);
+      // Any error reading from database is not critical
+      console.warn('Error reading region from database (using default):', error);
     }
-    setIsLoading(false);
+
+    // Always use default region as fallback
+    setCurrentRegion(DEFAULT_REGION);
   };
 
   const setRegion = async (region: RegionCode) => {
