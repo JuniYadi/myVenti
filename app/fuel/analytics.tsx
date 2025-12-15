@@ -6,22 +6,22 @@
 import { ChartConfig, FuelAnalyticsChart } from '@/components/fuel/FuelAnalyticsChart';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import CustomDateTimePicker, { CustomDateTimePickerRef } from '@/components/ui/CustomDateTimePicker';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useRegion } from '@/hooks/use-region';
 import { FuelService, VehicleService } from '@/services/index';
 import { FuelEntry, Vehicle } from '@/types/data';
-import CustomDateTimePicker, { CustomDateTimePickerRef } from '@/components/ui/CustomDateTimePicker';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
     ActivityIndicator,
     Alert,
-    Platform,
     ScrollView,
     StyleSheet,
     TouchableOpacity,
-    View,
+    View
 } from 'react-native';
 
 interface AnalyticsData {
@@ -416,7 +416,7 @@ export default function FuelAnalyticsScreen() {
           data={data}
           config={config}
           vehicles={vehicles}
-          unit={selectedChart === 'trends' ? '' : '$'}
+          unit={selectedChart === 'trends' ? '' : regionConfig.currency}
           subtitle={
             selectedChart === 'overview' ? 'Monthly fuel expenses over time' :
             selectedChart === 'trends' ? 'Cost and fuel consumption patterns' :
@@ -437,7 +437,14 @@ export default function FuelAnalyticsScreen() {
       <View style={styles.dateRangeButtons}>
         <TouchableOpacity
           style={[styles.dateButton, { backgroundColor: colors.surface, borderColor: colors.border }]}
-          onPress={() => startDateRef.current?.show()}
+          onPress={() => {
+            if (Platform.OS === 'web') {
+              // For web, we could implement a modal or use browser date picker
+              Alert.alert('Date Selection', 'Use the quick range buttons below for now');
+            } else {
+              startDateRef.current?.show();
+            }
+          }}
         >
           <IconSymbol name="calendar" size={16} color={colors.icon} />
           <ThemedText style={[styles.dateButtonText, { color: colors.text }]}>
@@ -453,7 +460,14 @@ export default function FuelAnalyticsScreen() {
 
         <TouchableOpacity
           style={[styles.dateButton, { backgroundColor: colors.surface, borderColor: colors.border }]}
-          onPress={() => endDateRef.current?.show()}
+          onPress={() => {
+            if (Platform.OS === 'web') {
+              // For web, we could implement a modal or use browser date picker
+              Alert.alert('Date Selection', 'Use the quick range buttons below for now');
+            } else {
+              endDateRef.current?.show();
+            }
+          }}
         >
           <IconSymbol name="calendar" size={16} color={colors.icon} />
           <ThemedText style={[styles.dateButtonText, { color: colors.text }]}>
@@ -544,21 +558,25 @@ export default function FuelAnalyticsScreen() {
         {renderChartSection()}
       </ScrollView>
 
-      {/* Date Pickers */}
-      <CustomDateTimePicker
-        ref={startDateRef}
-        value={startDate}
-        mode="date"
-        onChange={handleStartDateChange}
-        style={{ position: 'absolute', opacity: 0, height: 0 }}
-      />
-      <CustomDateTimePicker
-        ref={endDateRef}
-        value={endDate}
-        mode="date"
-        onChange={handleEndDateChange}
-        style={{ position: 'absolute', opacity: 0, height: 0 }}
-      />
+      {/* Date Pickers - Only render if component is available */}
+      {Platform.OS !== 'web' && (
+        <>
+          <CustomDateTimePicker
+            ref={startDateRef}
+            value={startDate}
+            mode="date"
+            onChange={handleStartDateChange}
+            style={{ position: 'absolute', opacity: 0, height: 0 }}
+          />
+          <CustomDateTimePicker
+            ref={endDateRef}
+            value={endDate}
+            mode="date"
+            onChange={handleEndDateChange}
+            style={{ position: 'absolute', opacity: 0, height: 0 }}
+          />
+        </>
+      )}
     </ThemedView>
   );
 }
