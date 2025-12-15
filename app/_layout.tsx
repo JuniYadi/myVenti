@@ -10,6 +10,7 @@ import { AuthProvider, useAuth } from '../hooks/use-auth';
 import { RegionProvider } from '../hooks/use-region';
 import { ThemeProvider, useColorScheme } from '../hooks/use-theme-manager';
 import { AppInitializer } from '../components/AppInitializer';
+import { ProviderErrorBoundary } from '../components/ErrorBoundary';
 
 function RootLayoutContent() {
   const colorScheme = useColorScheme();
@@ -57,13 +58,31 @@ export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <AppInitializer>
-        <ThemeProvider>
-          <RegionProvider>
-            <AuthProvider>
-              <RootLayoutContent />
-            </AuthProvider>
-          </RegionProvider>
-        </ThemeProvider>
+        <ProviderErrorBoundary
+          onError={(error, errorInfo) => {
+            console.error('ThemeProvider error:', error, errorInfo);
+          }}
+        >
+          <ThemeProvider>
+            <ProviderErrorBoundary
+              onError={(error, errorInfo) => {
+                console.error('RegionProvider error:', error, errorInfo);
+              }}
+            >
+              <RegionProvider>
+                <ProviderErrorBoundary
+                  onError={(error, errorInfo) => {
+                    console.error('AuthProvider error:', error, errorInfo);
+                  }}
+                >
+                  <AuthProvider>
+                    <RootLayoutContent />
+                  </AuthProvider>
+                </ProviderErrorBoundary>
+              </RegionProvider>
+            </ProviderErrorBoundary>
+          </ThemeProvider>
+        </ProviderErrorBoundary>
         <StatusBar style="auto" />
       </AppInitializer>
     </GestureHandlerRootView>
