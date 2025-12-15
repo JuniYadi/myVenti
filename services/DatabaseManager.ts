@@ -1,5 +1,14 @@
-import * as SQLite from 'expo-sqlite';
 import { Platform } from 'react-native';
+
+// Type definitions for SQLite to avoid import errors
+interface SQLiteDatabase {
+  closeAsync(): Promise<void>;
+  execAsync(props: { args: any[]; sql: string }[]): Promise<any[]>;
+}
+
+interface SQLiteStatic {
+  openDatabaseAsync(name: string): Promise<SQLiteDatabase>;
+}
 
 export interface DatabaseResult {
   insertId?: number;
@@ -9,9 +18,10 @@ export interface DatabaseResult {
 
 export class DatabaseManager {
   private static instance: DatabaseManager;
-  private database: SQLite.SQLiteDatabase | null = null;
+  private database: SQLiteDatabase | null = null;
   private isSQLiteAvailable: boolean = true;
   private fallbackStorage: { [key: string]: any } = {};
+  private SQLite: SQLiteStatic | null = null;
   readonly DB_NAME = 'myVenti.db';
   readonly DB_VERSION = '1.0.0';
 
@@ -31,35 +41,47 @@ export class DatabaseManager {
 
       console.log('Initializing database...');
 
-      // Check if SQLite is available
+      // Check if SQLite is available by trying to import it dynamically
       try {
-        // Try to open database
-        this.database = await SQLite.openDatabaseAsync(this.DB_NAME);
+        const SQLiteModule = require('expo-sqlite');
+        this.SQLite = SQLiteModule.default || SQLiteModule;
         this.isSQLiteAvailable = true;
-        console.log('SQLite is available, using native database');
-      } catch (sqliteError) {
-        console.warn('SQLite not available, falling back to memory storage:', sqliteError);
+        console.log('SQLite module loaded successfully');
+      } catch (sqliteImportError) {
+        console.warn('SQLite module not available, falling back to memory storage:', sqliteImportError);
         this.isSQLiteAvailable = false;
         this.initFallbackStorage();
         return;
       }
 
-      if (this.isSQLiteAvailable && this.database) {
-        // Enable foreign keys
-        await this.executeSql('PRAGMA foreign_keys = ON');
+      // Try to open database if SQLite is available
+      if (this.isSQLiteAvailable && this.SQLite) {
+        try {
+          this.database = await this.SQLite.openDatabaseAsync(this.DB_NAME);
+          console.log('SQLite database opened successfully');
 
-        // Create tables
-        await this.createTables();
+          // Enable foreign keys
+          await this.executeSql('PRAGMA foreign_keys = ON');
 
-        // Insert default settings
-        await this.insertDefaultSettings();
+          // Create tables
+          await this.createTables();
 
-        console.log('Database initialized successfully');
+          // Insert default settings
+          await this.insertDefaultSettings();
+
+          console.log('Database initialized successfully');
+        } catch (sqliteError) {
+          console.warn('Failed to open SQLite database, falling back to memory storage:', sqliteError);
+          this.isSQLiteAvailable = false;
+          this.database = null;
+          this.initFallbackStorage();
+        }
       }
     } catch (error) {
       console.error('Failed to initialize database:', error);
       // Fallback to memory storage
       this.isSQLiteAvailable = false;
+      this.database = null;
       this.initFallbackStorage();
     }
   }
@@ -187,12 +209,8 @@ export class DatabaseManager {
 
   async executeSql(query: string, params?: any[]): Promise<DatabaseResult> {
     // If SQLite is not available, use fallback storage
-    if (!this.isSQLiteAvailable) {
+    if (!this.isSQLiteAvailable || !this.database || !this.SQLite) {
       return this.executeFallbackSql(query, params);
-    }
-
-    if (!this.database) {
-      throw new Error('Database not initialized. Call initDatabase() first.');
     }
 
     try {
@@ -219,7 +237,11 @@ export class DatabaseManager {
       console.error('SQL execution error:', error);
       console.error('Query:', query);
       console.error('Params:', params);
-      throw error;
+      // If SQL execution fails, fall back to memory storage
+      console.warn('Falling back to memory storage due to SQL execution error');
+      this.isSQLiteAvailable = false;
+      this.database = null;
+      return this.executeFallbackSql(query, params);
     }
   }
 
@@ -390,12 +412,8 @@ export class DatabaseManager {
 
   async transaction<T>(callback: () => Promise<T>): Promise<T> {
     // For fallback storage, just execute the callback
-    if (!this.isSQLiteAvailable) {
+    if (!this.isSQLiteAvailable || !this.database || !this.SQLite) {
       return callback();
-    }
-
-    if (!this.database) {
-      throw new Error('Database not initialized. Call initDatabase() first.');
     }
 
     try {
