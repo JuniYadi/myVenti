@@ -9,7 +9,6 @@ import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import type { FuelSearchFilter, Vehicle } from '@/types/data';
-import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import React, { useCallback, useMemo, useState } from 'react';
 import {
     Platform,
@@ -19,6 +18,20 @@ import {
     TouchableOpacity,
     View,
 } from 'react-native';
+
+// Dynamically import DateTimePicker only on native platforms
+let DateTimePicker: any = null;
+let DateTimePickerEvent: any = null;
+
+if (Platform.OS !== 'web') {
+  try {
+    const pickerModule = require('@react-native-community/datetimepicker');
+    DateTimePicker = pickerModule.default || pickerModule;
+    DateTimePickerEvent = pickerModule.DateTimePickerEvent;
+  } catch (error) {
+    console.warn('DateTimePicker not available on this platform:', error);
+  }
+}
 
 interface FuelSearchFilterProps {
   filter: FuelSearchFilter;
@@ -65,7 +78,7 @@ export function FuelSearchFilter({ filter, onFilterChange, vehicles }: FuelSearc
     debouncedSearch(text);
   };
 
-  const handleStartDateChange = (event: DateTimePickerEvent, selectedDate?: Date) => {
+  const handleStartDateChange = (event: any, selectedDate?: Date) => {
     setShowStartDatePicker(false);
     if (selectedDate) {
       setStartDate(selectedDate);
@@ -80,7 +93,7 @@ export function FuelSearchFilter({ filter, onFilterChange, vehicles }: FuelSearc
     }
   };
 
-  const handleEndDateChange = (event: DateTimePickerEvent, selectedDate?: Date) => {
+  const handleEndDateChange = (event: any, selectedDate?: Date) => {
     setShowEndDatePicker(false);
     if (selectedDate) {
       setEndDate(selectedDate);
@@ -92,6 +105,41 @@ export function FuelSearchFilter({ filter, onFilterChange, vehicles }: FuelSearc
           end: dateStr,
         },
       });
+    }
+  };
+
+  const handleWebDateInput = (type: 'start' | 'end') => {
+    if (Platform.OS === 'web') {
+      const input = document.createElement('input');
+      input.type = 'date';
+      input.value = type === 'start'
+        ? (startDate?.toISOString().split('T')[0] || '')
+        : (endDate?.toISOString().split('T')[0] || '');
+
+      input.onchange = (e: any) => {
+        const selectedDate = new Date(e.target.value);
+        if (type === 'start') {
+          setStartDate(selectedDate);
+          onFilterChange({
+            ...filter,
+            dateRange: {
+              start: e.target.value,
+              end: filter.dateRange?.end || new Date().toISOString().split('T')[0],
+            },
+          });
+        } else {
+          setEndDate(selectedDate);
+          onFilterChange({
+            ...filter,
+            dateRange: {
+              start: filter.dateRange?.start || new Date().toISOString().split('T')[0],
+              end: e.target.value,
+            },
+          });
+        }
+      };
+
+      input.click();
     }
   };
 
@@ -216,7 +264,13 @@ export function FuelSearchFilter({ filter, onFilterChange, vehicles }: FuelSearc
           <View style={styles.dateContainer}>
             <TouchableOpacity
               style={[styles.dateButton, { backgroundColor: colors.surface, borderColor: colors.border }]}
-              onPress={() => setShowStartDatePicker(true)}
+              onPress={() => {
+                if (DateTimePicker) {
+                  setShowStartDatePicker(true);
+                } else {
+                  handleWebDateInput('start');
+                }
+              }}
             >
               <IconSymbol name="calendar" size={16} color={colors.icon} />
               <ThemedText style={styles.dateText}>
@@ -225,7 +279,13 @@ export function FuelSearchFilter({ filter, onFilterChange, vehicles }: FuelSearc
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.dateButton, { backgroundColor: colors.surface, borderColor: colors.border }]}
-              onPress={() => setShowEndDatePicker(true)}
+              onPress={() => {
+                if (DateTimePicker) {
+                  setShowEndDatePicker(true);
+                } else {
+                  handleWebDateInput('end');
+                }
+              }}
             >
               <IconSymbol name="calendar" size={16} color={colors.icon} />
               <ThemedText style={styles.dateText}>
@@ -321,8 +381,8 @@ export function FuelSearchFilter({ filter, onFilterChange, vehicles }: FuelSearc
         )}
       </ScrollView>
 
-      {/* Date Pickers */}
-      {showStartDatePicker && (
+      {/* Date Pickers - Only render on native platforms */}
+      {DateTimePicker && showStartDatePicker && (
         <DateTimePicker
           value={startDate || new Date()}
           mode="date"
@@ -330,7 +390,7 @@ export function FuelSearchFilter({ filter, onFilterChange, vehicles }: FuelSearc
           onChange={handleStartDateChange}
         />
       )}
-      {showEndDatePicker && (
+      {DateTimePicker && showEndDatePicker && (
         <DateTimePicker
           value={endDate || new Date()}
           mode="date"
