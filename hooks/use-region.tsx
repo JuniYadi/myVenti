@@ -26,15 +26,43 @@ export function RegionProvider({ children }: RegionProviderProps) {
   const [hasError, setHasError] = useState(false);
 
   useEffect(() => {
-    loadRegionPreference();
+    let isMounted = true;
+
+    loadRegionPreference().catch(error => {
+      if (isMounted) {
+        console.error('Failed to load region preference:', error);
+        setHasError(true);
+        setCurrentRegion(DEFAULT_REGION);
+        setIsLoading(false);
+      }
+    });
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   const loadRegionPreference = async () => {
     try {
-      // Ensure database is initialized
-      await DatabaseManager.getInstance().initDatabase();
-
+      // Ensure database is initialized with retry logic
       const db = DatabaseManager.getInstance();
+      let retryCount = 0;
+      const maxRetries = 3;
+
+      while (retryCount < maxRetries) {
+        try {
+          await db.initDatabase();
+          break;
+        } catch (initError) {
+          retryCount++;
+          if (retryCount >= maxRetries) {
+            throw initError;
+          }
+          // Wait a bit before retrying
+          await new Promise(resolve => setTimeout(resolve, 500));
+        }
+      }
+
       const result = await db.executeSql('SELECT value FROM app_settings WHERE key = ?', ['region']);
 
       if (result.rows && result.rows.length > 0) {
@@ -55,12 +83,10 @@ export function RegionProvider({ children }: RegionProviderProps) {
       }
     } catch (error) {
       console.error('Error loading region preference:', error);
-      setHasError(true);
-      // Fallback to default region
+      // Don't set hasError here, just use fallback
       setCurrentRegion(DEFAULT_REGION);
-    } finally {
-      setIsLoading(false);
     }
+    setIsLoading(false);
   };
 
   const setRegion = async (region: RegionCode) => {
