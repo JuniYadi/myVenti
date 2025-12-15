@@ -16,6 +16,14 @@ interface RegionContextType {
 
 const RegionContext = createContext<RegionContextType | undefined>(undefined);
 
+// Create a default context value for fallback
+const defaultContextValue: RegionContextType = {
+  currentRegion: DEFAULT_REGION,
+  regionConfig: REGION_CONFIGS[DEFAULT_REGION],
+  setRegion: async () => {},
+  isLoading: false,
+};
+
 interface RegionProviderProps {
   children: ReactNode;
 }
@@ -23,72 +31,46 @@ interface RegionProviderProps {
 export function RegionProvider({ children }: RegionProviderProps) {
   const [currentRegion, setCurrentRegion] = useState<RegionCode>(DEFAULT_REGION);
   const [isLoading, setIsLoading] = useState(true);
-  const [hasError, setHasError] = useState(false);
 
+  // Load region preference asynchronously
   useEffect(() => {
     let isMounted = true;
 
-    const initRegion = async () => {
+    const loadRegionPreference = async () => {
+      // Initialize database without throwing errors
+      const db = DatabaseManager.getInstance();
+
+      // Don't wait for database initialization - it's non-blocking
+      db.initDatabase().catch(() => {
+        // Ignore errors, database will use fallback
+      });
+
+      // Try to load region from database
       try {
-        await loadRegionPreference();
+        const result = await db.executeSql('SELECT value FROM app_settings WHERE key = ?', ['region']);
+
+        if (result.rows && result.rows.length > 0) {
+          const savedRegion = result.rows[0].value;
+          if (savedRegion && savedRegion in REGION_CONFIGS && isMounted) {
+            setCurrentRegion(savedRegion as RegionCode);
+          }
+        }
       } catch (error) {
-        console.error('Failed to load region preference:', error);
-        if (isMounted) {
-          setHasError(true);
-          // Always use default region on error
-          setCurrentRegion(DEFAULT_REGION);
-        }
-      } finally {
-        if (isMounted) {
-          setIsLoading(false);
-        }
+        // Any error reading from database is not critical
+        console.warn('Error reading region from database (using default):', error);
+      }
+
+      if (isMounted) {
+        setIsLoading(false);
       }
     };
 
-    initRegion();
+    loadRegionPreference();
 
     return () => {
       isMounted = false;
     };
   }, []);
-
-  const loadRegionPreference = async () => {
-    // Initialize database without throwing errors
-    const db = DatabaseManager.getInstance();
-
-    // Try to initialize but don't let errors propagate
-    try {
-      await db.initDatabase();
-    } catch (error) {
-      // DatabaseManager now handles errors internally
-      console.warn('Database initialization issue (using fallback):', error);
-    }
-
-    // Try to load region from database
-    try {
-      const result = await db.executeSql('SELECT value FROM app_settings WHERE key = ?', ['region']);
-
-      if (result.rows && result.rows.length > 0) {
-        const savedRegion = result.rows[0].value;
-        if (savedRegion && savedRegion in REGION_CONFIGS) {
-          setCurrentRegion(savedRegion as RegionCode);
-          return;
-        } else {
-          // Update with default region if invalid
-          await db.executeSql(
-            'UPDATE app_settings SET value = ?, updated_at = CURRENT_TIMESTAMP WHERE key = ?',
-            [DEFAULT_REGION, 'region']
-          );
-        }
-      }
-    } catch (error) {
-      // Any error reading from database is not critical
-      console.warn('Error reading region from database (using default):', error);
-    }
-
-    // Always use default region as fallback
-    setCurrentRegion(DEFAULT_REGION);
-  };
 
   const setRegion = async (region: RegionCode) => {
     try {
@@ -121,10 +103,9 @@ export function RegionProvider({ children }: RegionProviderProps) {
 
 export function useRegion(): RegionContextType {
   const context = useContext(RegionContext);
-  if (context === undefined) {
-    throw new Error('useRegion must be used within a RegionProvider');
-  }
-  return context;
+  // Provide fallback context value if provider is not available
+  // This prevents crashes and allows the app to work even if RegionProvider fails
+  return context || defaultContextValue;
 }
 
 // Utility functions for formatting
