@@ -3,24 +3,23 @@
  * Provides form fields for service information with suggestions and validation
  */
 
-import React, { useState, useEffect } from 'react';
+import { ThemedText } from '@/components/themed-text';
+import { ThemedView } from '@/components/themed-view';
+import { IconSymbol } from '@/components/ui/icon-symbol';
+import { formatCurrency, useRegion } from '@/hooks/use-region';
+import { VehicleService } from '@/services/index';
+import { ServiceFormData, ServiceRecord, Vehicle } from '@/types/data';
+import React, { useEffect, useState } from 'react';
 import {
-  View,
-  TextInput,
-  StyleSheet,
   Alert,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  StyleSheet,
+  TextInput,
   TouchableOpacity,
-  Text,
+  View
 } from 'react-native';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { IconSymbol } from '@/components/ui/icon-symbol';
-import { ServiceRecord, ServiceFormData, Vehicle } from '@/types/data';
-import { VehicleService } from '@/services/index';
-import { useRegion, formatCurrency, convertDistance } from '@/hooks/use-region';
 
 interface ServiceFormProps {
   serviceRecord?: ServiceRecord | null;
@@ -96,11 +95,12 @@ export function ServiceForm({
   const loadVehicles = async () => {
     try {
       const vehicleList = await VehicleService.getAll();
-      setVehicles(vehicleList.filter(v => v.status === 'active'));
+      const activeVehicles = vehicleList.filter(v => v.status === 'active');
+      setVehicles(activeVehicles);
 
-      // If only one vehicle and no vehicle selected, auto-select it
-      if (vehicleList.length === 1 && !formData.vehicleId) {
-        setFormData(prev => ({ ...prev, vehicleId: vehicleList[0].id }));
+      // If only one active vehicle and no vehicle selected, auto-select it
+      if (activeVehicles.length === 1 && !formData.vehicleId) {
+        setFormData(prev => ({ ...prev, vehicleId: activeVehicles[0].id }));
       }
     } catch (error) {
       console.error('Error loading vehicles:', error);
@@ -201,7 +201,7 @@ export function ServiceForm({
           </ThemedText>
 
           {/* Vehicle Selection */}
-          {vehicles.length > 1 && (
+          {vehicles.length >= 1 && (
             <View style={styles.fieldGroup}>
               <ThemedText style={styles.label}>Vehicle</ThemedText>
               <View style={styles.vehicleContainer}>

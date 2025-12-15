@@ -39,7 +39,7 @@ export function FuelForm({
   const { regionConfig, isLoading: regionLoading } = useRegion();
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null);
-  
+
   // Helper to convert stored gallons to display liters (for editing)
   const getDisplayQuantity = () => {
     if (!fuelEntry?.quantity) return '';
@@ -158,7 +158,9 @@ export function FuelForm({
       const vehicleType = selectedVehicle?.type;
       if (vehicleType === 'electric') {
         const maxPrice = regionConfig.currency.code === 'IDR' ? 5000 : 2;
-        newErrors.pricePerUnit = `kWh price seems unusually high (max ${formatCurrency(maxPrice, regionConfig)})`;
+        if (price > maxPrice) {
+          newErrors.pricePerUnit = `kWh price seems unusually high (max ${formatCurrency(maxPrice, regionConfig)})`;
+        }
       } else if ((vehicleType === 'gas' || vehicleType === 'hybrid')) {
         const maxPrice = regionConfig.currency.code === 'IDR' ? 25000 : 10;
         if (price > maxPrice) {
@@ -201,7 +203,7 @@ export function FuelForm({
       // Convert quantity and price from user's unit to gallons for storage (if using liters)
       let quantityInGallons = parseFloat(formData.quantity);
       let pricePerGallon = parseFloat(formData.pricePerUnit);
-      
+
       if (regionConfig.volume.unit === 'liters' && selectedVehicle?.type !== 'electric') {
         // Convert liters to gallons for storage
         quantityInGallons = quantityInGallons / 3.78541;
@@ -278,7 +280,9 @@ export function FuelForm({
             newErrors.pricePerUnit = 'Price per unit must be greater than 0';
           } else if (vType === 'electric') {
             const maxPrice = regionConfig.currency.code === 'IDR' ? 5000 : 2;
-            newErrors.pricePerUnit = `kWh price seems unusually high (max ${formatCurrency(maxPrice, regionConfig)})`;
+            if (price > maxPrice) {
+              newErrors.pricePerUnit = `kWh price seems unusually high (max ${formatCurrency(maxPrice, regionConfig)})`;
+            }
           } else if ((vType === 'gas' || vType === 'hybrid')) {
             const maxPrice = regionConfig.currency.code === 'IDR' ? 25000 : 10;
             if (price > maxPrice) {
@@ -380,7 +384,7 @@ export function FuelForm({
           </ThemedText>
 
           {/* Vehicle Selection */}
-          {vehicles.length > 1 && (
+          {vehicles.length >= 1 && (
             <View style={styles.fieldGroup}>
               <ThemedText style={styles.label}>Vehicle</ThemedText>
               <View style={styles.vehicleContainer}>
@@ -399,8 +403,8 @@ export function FuelForm({
                         vehicle.type === 'electric'
                           ? 'bolt.fill'
                           : vehicle.type === 'hybrid'
-                          ? 'leaf.fill'
-                          : 'fuelpump.fill'
+                            ? 'leaf.fill'
+                            : 'fuelpump.fill'
                       }
                       size={20}
                       color={formData.vehicleId === vehicle.id ? '#fff' : '#007AFF'}
