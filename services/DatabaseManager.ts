@@ -33,56 +33,48 @@ export class DatabaseManager {
   }
 
   async initDatabase(): Promise<void> {
+    // Return early if already initialized
+    if (this.database || this.isSQLiteAvailable === false) {
+      return;
+    }
+
+    console.log('Initializing database...');
+
+    // Check if SQLite is available by trying to import it dynamically
     try {
-      if (this.database) {
-        console.log('Database already initialized');
-        return;
-      }
-
-      console.log('Initializing database...');
-
-      // Check if SQLite is available by trying to import it dynamically
-      try {
-        const SQLiteModule = require('expo-sqlite');
-        this.SQLite = SQLiteModule.default || SQLiteModule;
-        this.isSQLiteAvailable = true;
-        console.log('SQLite module loaded successfully');
-      } catch (sqliteImportError) {
-        console.warn('SQLite module not available, falling back to memory storage:', sqliteImportError);
-        this.isSQLiteAvailable = false;
-        this.initFallbackStorage();
-        return;
-      }
-
-      // Try to open database if SQLite is available
-      if (this.isSQLiteAvailable && this.SQLite) {
-        try {
-          this.database = await this.SQLite.openDatabaseAsync(this.DB_NAME);
-          console.log('SQLite database opened successfully');
-
-          // Enable foreign keys
-          await this.executeSql('PRAGMA foreign_keys = ON');
-
-          // Create tables
-          await this.createTables();
-
-          // Insert default settings
-          await this.insertDefaultSettings();
-
-          console.log('Database initialized successfully');
-        } catch (sqliteError) {
-          console.warn('Failed to open SQLite database, falling back to memory storage:', sqliteError);
-          this.isSQLiteAvailable = false;
-          this.database = null;
-          this.initFallbackStorage();
-        }
-      }
-    } catch (error) {
-      console.error('Failed to initialize database:', error);
-      // Fallback to memory storage
+      const SQLiteModule = require('expo-sqlite');
+      this.SQLite = SQLiteModule.default || SQLiteModule;
+      this.isSQLiteAvailable = true;
+      console.log('SQLite module loaded successfully');
+    } catch (sqliteImportError) {
+      console.warn('SQLite module not available, falling back to memory storage:', sqliteImportError);
       this.isSQLiteAvailable = false;
-      this.database = null;
       this.initFallbackStorage();
+      return;
+    }
+
+    // Try to open database if SQLite is available
+    if (this.isSQLiteAvailable && this.SQLite) {
+      try {
+        this.database = await this.SQLite.openDatabaseAsync(this.DB_NAME);
+        console.log('SQLite database opened successfully');
+
+        // Enable foreign keys
+        await this.executeSql('PRAGMA foreign_keys = ON');
+
+        // Create tables
+        await this.createTables();
+
+        // Insert default settings
+        await this.insertDefaultSettings();
+
+        console.log('Database initialized successfully');
+      } catch (sqliteError) {
+        console.warn('Failed to open SQLite database, falling back to memory storage:', sqliteError);
+        this.isSQLiteAvailable = false;
+        this.database = null;
+        this.initFallbackStorage();
+      }
     }
   }
 
@@ -214,7 +206,6 @@ export class DatabaseManager {
     }
 
     try {
-      console.log(`Executing SQL: ${query}`, params || []);
       const result = await this.database.execAsync([{ args: params || [], sql: query }]);
 
       // Transform the result to match expected format
