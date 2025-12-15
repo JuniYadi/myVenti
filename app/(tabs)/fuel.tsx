@@ -171,8 +171,8 @@ export default function FuelScreen() {
     // Apply price range filter
     if (filter.priceRange) {
       filteredEntries = filteredEntries.filter(entry =>
-        (!filter.priceRange.min || entry.pricePerUnit >= filter.priceRange.min) &&
-        (!filter.priceRange.max || entry.pricePerUnit <= filter.priceRange.max)
+        (!filter.priceRange?.min || entry.pricePerUnit >= filter.priceRange.min) &&
+        (!filter.priceRange?.max || entry.pricePerUnit <= filter.priceRange.max)
       );
     }
 
