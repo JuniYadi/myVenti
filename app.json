@@ -33,7 +33,9 @@
     "plugins": [
       "expo-router",
       "expo-sqlite",
+      "@react-native-async-storage/async-storage",
       "@react-native-community/datetimepicker",
+      "@react-native-google-signin/google-signin",
       [
         "expo-splash-screen",
         {
