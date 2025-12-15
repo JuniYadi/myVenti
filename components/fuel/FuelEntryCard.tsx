@@ -1,27 +1,21 @@
 /**
  * FuelEntryCard component for displaying individual fuel entries
- * Features swipe gestures, edit/delete actions with haptic feedback, and vehicle-specific formatting
+ * Features visible edit/delete buttons with haptic feedback, matching ServiceListItem design
  */
 
+import { ThemedText } from '@/components/themed-text';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { convertVolume, formatCurrency, useRegion } from '@/hooks/use-region';
 import type { FuelEntry, Vehicle } from '@/types/data';
 import * as Haptics from 'expo-haptics';
-import React, { useRef } from 'react';
+import React from 'react';
 import {
-  Animated,
   StyleSheet,
-  Text,
   TouchableOpacity,
   View,
 } from 'react-native';
-import {
-  PanGestureHandler,
-  PanGestureHandlerGestureEvent,
-  State,
-} from 'react-native-gesture-handler';
 
 interface FuelEntryCardProps {
   entry: FuelEntry;
@@ -35,11 +29,6 @@ export function FuelEntryCard({ entry, vehicle, onEdit, onDelete, onPress }: Fue
   const colorScheme = useColorScheme() || 'light';
   const colors = Colors[colorScheme];
   const { regionConfig } = useRegion();
-
-  const translateX = useRef(new Animated.Value(0)).current;
-  const lastOffset = useRef(0);
-  const swipeThreshold = 80;
-  const actionButtonWidth = 60;
 
   // Format helpers
   const formatQuantity = () => {
@@ -63,26 +52,24 @@ export function FuelEntryCard({ entry, vehicle, onEdit, onDelete, onPress }: Fue
     if (vehicle.type === 'electric') {
       return formatCurrency(entry.pricePerUnit, regionConfig);
     }
-    
+
     // Price is stored per gallon, convert to user's preferred unit for display
     let pricePerUnit = entry.pricePerUnit;
     if (regionConfig.volume.unit === 'liters') {
       // Convert price per gallon to price per liter
       pricePerUnit = entry.pricePerUnit / 3.78541;
     }
-    
+
     return formatCurrency(pricePerUnit, regionConfig);
   };
 
-  const formatPriceLabel = () => {
-    return vehicle.type === 'electric' ? 'Price/kWh' : `Price/${regionConfig.volume.abbreviation}`;
-  };
-
-  const formatMPG = () => {
-    if (vehicle.type === 'electric') {
-      return 'N/A (Electric)';
-    }
-    return entry.mpg ? entry.mpg.toFixed(1) : 'N/A';
+  const formatDate = () => {
+    const date = new Date(entry.date);
+    return date.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric'
+    });
   };
 
   const getVehicleIcon = () => {
@@ -107,175 +94,108 @@ export function FuelEntryCard({ entry, vehicle, onEdit, onDelete, onPress }: Fue
     }
   };
 
-  // Haptic feedback
-  const triggerHaptic = (type: 'light' | 'medium' | 'heavy' | 'success' | 'warning' | 'error' = 'light') => {
-    switch (type) {
-      case 'success':
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        break;
-      case 'warning':
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
-        break;
-      case 'error':
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-        break;
-      case 'heavy':
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
-        break;
-      case 'medium':
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-        break;
-      default:
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    }
-  };
-
   const handleEdit = () => {
-    triggerHaptic('light');
-    resetCardPosition();
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     onEdit(entry);
   };
 
   const handleDelete = () => {
-    triggerHaptic('warning');
-    resetCardPosition();
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
     onDelete(entry);
   };
 
-  const handleCardPress = () => {
-    if (Math.abs(lastOffset.current) < swipeThreshold / 2) {
-      triggerHaptic('light');
-      onPress?.(entry);
-    }
-  };
-
-  const resetCardPosition = () => {
-    lastOffset.current = 0;
-    Animated.spring(translateX, {
-      toValue: 0,
-      useNativeDriver: true,
-      friction: 8,
-      tension: 40,
-    }).start();
-  };
-
-  // Swipe gesture handling
-  const onGestureEvent = Animated.event(
-    [{ nativeEvent: { translationX: translateX } }],
-    { useNativeDriver: false }
-  );
-
-  const onHandlerStateChange = (event: PanGestureHandlerGestureEvent) => {
-    const { nativeEvent } = event;
-
-    if (nativeEvent.state === State.END) {
-      const { translationX, velocityX } = nativeEvent;
-
-      // Determine if swipe should snap to action buttons or center
-      const shouldSnapToActions =
-        (translationX < -swipeThreshold && velocityX < -500) ||
-        (translationX < -swipeThreshold * 1.5);
-
-      if (shouldSnapToActions) {
-        // Snap to show action buttons
-        lastOffset.current = -actionButtonWidth * 2;
-        triggerHaptic('medium');
-        Animated.spring(translateX, {
-          toValue: -actionButtonWidth * 2,
-          useNativeDriver: true,
-          friction: 8,
-          tension: 40,
-        }).start();
-      } else {
-        // Snap back to center
-        resetCardPosition();
-      }
-    }
+  const handlePress = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    onPress?.(entry);
   };
 
   return (
     <View style={styles.container}>
-      {/* Action buttons */}
-      <Animated.View
+      <TouchableOpacity
         style={[
-          styles.actionButtons,
+          styles.item,
           {
-            transform: [{ translateX: Animated.multiply(translateX, -1) }],
+            backgroundColor: colors.card,
+            borderColor: colors.border,
+            shadowColor: colors.shadow,
           },
         ]}
+        onPress={handlePress}
+        activeOpacity={0.7}
       >
-        <TouchableOpacity
-          style={[styles.actionButton, styles.editButton, { backgroundColor: colors.primary }]}
-          onPress={handleEdit}
-          activeOpacity={0.8}
-        >
-          <IconSymbol name="pencil" size={16} color="white" />
-          <Text style={styles.actionButtonText}>Edit</Text>
-        </TouchableOpacity>
+        {/* Main content row */}
+        <View style={styles.mainRow}>
+          {/* Fuel entry info */}
+          <View style={styles.entryInfo}>
+            <View style={styles.entryHeader}>
+              <IconSymbol
+                name="fuelpump.fill"
+                size={20}
+                color={colors.primary}
+              />
+              <ThemedText style={[styles.entryDate, { color: colors.text }]}>
+                {formatDate()}
+              </ThemedText>
+            </View>
+            <ThemedText style={[styles.quantityInfo, { color: colors.text }]} numberOfLines={1}>
+              {formatQuantity()} • {formatPricePerUnit()}/{vehicle.type === 'electric' ? 'kWh' : regionConfig.volume.abbreviation}
+            </ThemedText>
 
-        <TouchableOpacity
-          style={[styles.actionButton, styles.deleteButton, { backgroundColor: colors.error }]}
-          onPress={handleDelete}
-          activeOpacity={0.8}
-        >
-          <IconSymbol name="trash" size={16} color="white" />
-          <Text style={styles.actionButtonText}>Delete</Text>
-        </TouchableOpacity>
-      </Animated.View>
-
-      {/* Main card */}
-      <PanGestureHandler
-        onGestureEvent={onGestureEvent}
-        onHandlerStateChange={onHandlerStateChange}
-      >
-        <Animated.View
-          style={[
-            styles.card,
-            {
-              backgroundColor: colors.card,
-              borderColor: colors.border,
-              shadowColor: colors.shadow,
-              transform: [{ translateX }],
-            },
-          ]}
-        >
-          <TouchableOpacity
-            style={styles.cardContent}
-            onPress={handleCardPress}
-            activeOpacity={0.9}
-          >
-            {/* SUPER COMPACT DESIGN */}
-            <View style={styles.compactContainer}>
-              {/* Single line with date, vehicle, and amount */}
-              <View style={styles.compactHeader}>
+            {/* Vehicle and station row */}
+            <View style={styles.metadataRow}>
+              <View style={styles.vehicleInfo}>
                 <IconSymbol
                   name={getVehicleIcon()}
                   size={12}
                   color={getVehicleIconColor()}
                 />
-                <Text style={styles.compactDate}>{entry.date}</Text>
-                <Text style={styles.compactVehicle}>{vehicle.name}</Text>
-                <Text style={styles.compactAmount}>{formatCurrency(entry.amount, regionConfig)}</Text>
+                <ThemedText style={[styles.vehicleName, { color: colors.icon }]}>
+                  {vehicle.name}
+                </ThemedText>
               </View>
-
-              {/* Single line with quantity and price */}
-              <View style={styles.compactSubHeader}>
-                <Text style={styles.compactQuantity}>{formatQuantity()}</Text>
-                <Text style={styles.compactPrice}>• {formatPricePerUnit()}/{vehicle.type === 'electric' ? 'kWh' : regionConfig.volume.abbreviation}</Text>
-              </View>
-
               {entry.fuelStation && (
-                <Text style={styles.compactStation}>📍 {entry.fuelStation}</Text>
+                <ThemedText style={[styles.station, { color: colors.icon }]} numberOfLines={1}>
+                  📍 {entry.fuelStation}
+                </ThemedText>
               )}
             </View>
+          </View>
 
-            {/* Compact notes - only if very short */}
-            {entry.notes && entry.notes.length < 20 && (
-              <Text style={styles.compactNotes}>📝 {entry.notes}</Text>
-            )}
-          </TouchableOpacity>
-        </Animated.View>
-      </PanGestureHandler>
+          {/* Cost and actions */}
+          <View style={styles.rightSection}>
+            <ThemedText style={[styles.cost, { color: colors.primary }]}>
+              {formatCurrency(entry.amount, regionConfig)}
+            </ThemedText>
+
+            {/* Action buttons */}
+            <View style={styles.actionButtons}>
+              <TouchableOpacity
+                style={[styles.actionButton, styles.editButton, { borderColor: colors.border }]}
+                onPress={handleEdit}
+                activeOpacity={0.7}
+              >
+                <IconSymbol name="pencil" size={14} color={colors.primary} />
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.actionButton, styles.deleteButton, { borderColor: colors.border }]}
+                onPress={handleDelete}
+                activeOpacity={0.7}
+              >
+                <IconSymbol name="trash" size={14} color={colors.error} />
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+
+        {/* Notes section if present */}
+        {entry.notes && (
+          <View style={styles.notesSection}>
+            <ThemedText style={[styles.notes, { color: colors.icon }]} numberOfLines={2}>
+              📝 {entry.notes}
+            </ThemedText>
+          </View>
+        )}
+      </TouchableOpacity>
     </View>
   );
 }
@@ -283,199 +203,97 @@ export function FuelEntryCard({ entry, vehicle, onEdit, onDelete, onPress }: Fue
 const styles = StyleSheet.create({
   container: {
     marginHorizontal: 12,
-    marginVertical: 6,
-    position: 'relative',
+    marginVertical: 4,
   },
-  actionButtons: {
-    position: 'absolute',
-    right: 0,
-    top: 0,
-    bottom: 0,
-    left: 0,
-    flexDirection: 'row',
-    zIndex: 1,
-  },
-  actionButton: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    flexDirection: 'row',
-    paddingHorizontal: 6,
-  },
-  editButton: {
-    borderTopRightRadius: 0,
-    borderBottomRightRadius: 0,
-  },
-  deleteButton: {
-    borderTopLeftRadius: 0,
-    borderBottomLeftRadius: 0,
-  },
-  actionButtonText: {
-    color: 'white',
-    fontSize: 11,
-    fontWeight: '600',
-    marginLeft: 3,
-  },
-  card: {
+  item: {
     borderRadius: 8,
     borderWidth: 1,
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
     shadowRadius: 2,
     elevation: 2,
-    zIndex: 2,
-    backgroundColor: '#fafafa', // Temporary indicator of new design
   },
-  cardContent: {
-    padding: 6,
+  mainRow: {
+    flexDirection: 'row',
+    padding: 12,
   },
-  compactContainer: {
-    backgroundColor: '#f8f8f8',
-    borderRadius: 6,
-    padding: 6,
+  entryInfo: {
+    flex: 1,
+    marginRight: 12,
   },
-  compactHeader: {
+  entryHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    marginBottom: 3,
+    marginBottom: 4,
   },
-  compactDate: {
-    fontSize: 10,
+  entryDate: {
+    fontSize: 16,
     fontWeight: '600',
-    color: '#333',
     flex: 1,
   },
-  compactVehicle: {
-    fontSize: 11,
-    fontWeight: '500',
-    color: '#555',
-    flex: 1,
+  quantityInfo: {
+    fontSize: 14,
+    lineHeight: 18,
+    marginBottom: 6,
   },
-  compactAmount: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#007AFF',
-  },
-  compactSubHeader: {
+  metadataRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    marginBottom: 2,
-  },
-  compactQuantity: {
-    fontSize: 10,
-    color: '#666',
-    fontStyle: 'italic',
-  },
-  compactPrice: {
-    fontSize: 10,
-    color: '#666',
-  },
-  compactStation: {
-    fontSize: 9,
-    color: '#888',
-    fontStyle: 'italic',
-    marginTop: 2,
-  },
-  compactNotes: {
-    fontSize: 9,
-    color: '#888',
-    fontStyle: 'italic',
-    marginTop: 3,
+    gap: 12,
+    flexWrap: 'wrap',
   },
   vehicleInfo: {
-    flex: 1,
-  },
-  vehicleHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 3,
-  },
-  vehicleIcon: {
-    marginRight: 4,
-  },
-  date: {
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  vehicleRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 3,
+    gap: 4,
   },
   vehicleName: {
     fontSize: 12,
     fontWeight: '500',
-    flex: 1,
   },
-  amount: {
-    fontSize: 16,
-    fontWeight: '700',
-  },
-  detailsRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 4,
-  },
-  quantity: {
-    fontSize: 11,
-    fontStyle: 'italic',
-  },
-  detailText: {
-    fontSize: 11,
-    fontStyle: 'italic',
-  },
-  fuelStation: {
-    fontSize: 10,
-    fontStyle: 'italic',
-    marginTop: 2,
-  },
-  metricsSection: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 4,
-    paddingTop: 4,
-    borderTopWidth: 1,
-    borderTopColor: '#f0f0f0',
-  },
-  metricItem: {
-    alignItems: 'center',
-    flex: 1,
-  },
-  metricLabel: {
-    fontSize: 9,
-    fontWeight: '600',
-    letterSpacing: 0.3,
-    marginBottom: 1,
-  },
-  metricValue: {
+  station: {
     fontSize: 12,
-    fontWeight: '500',
+    flex: 1,
+  },
+  rightSection: {
+    alignItems: 'flex-end',
+    justifyContent: 'space-between',
+    minWidth: 80,
+  },
+  cost: {
+    fontSize: 18,
+    fontWeight: '700',
+    marginBottom: 8,
+  },
+  actionButtons: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  actionButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    backgroundColor: '#fff',
+  },
+  editButton: {
+    // Style inherited from props
+  },
+  deleteButton: {
+    // Style inherited from props
   },
   notesSection: {
-    marginTop: 4,
-    paddingTop: 4,
     borderTopWidth: 1,
-    borderTopColor: '#f0f0f0',
+    borderTopColor: '#f8f8f8',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
   },
   notes: {
-    fontSize: 10,
+    fontSize: 12,
     fontStyle: 'italic',
-    lineHeight: 14,
-  },
-  swipeHint: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginTop: 4,
-    opacity: 0.3,
-  },
-  hintLine: {
-    width: 12,
-    height: 1,
-    marginHorizontal: 1,
+    lineHeight: 16,
   },
 });
