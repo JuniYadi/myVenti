@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
-import { View, StyleSheet, Dimensions, Platform } from 'react-native';
-import { useColorScheme } from 'react-native';
-import * as Haptics from 'expo-haptics';
-import { useRouter, usePathname } from 'expo-router';
 import { Colors, Spacing } from '@/constants/theme';
+import { useColorScheme } from '@/hooks/use-theme-manager';
+import * as Haptics from 'expo-haptics';
+import { usePathname, useRouter } from 'expo-router';
+import React, { useState } from 'react';
+import { Dimensions, Platform, StyleSheet, View } from 'react-native';
 import { CircularHomeButton } from './circular-home-button';
 import { TabButton } from './tab-button';
 
@@ -31,13 +31,13 @@ export function CustomTabNavigator() {
   const pathname = usePathname();
 
   const [activeTab, setActiveTab] = useState<string>(() => {
-  if (pathname === '/') return 'home';
-  if (pathname === '/vehicle') return 'vehicle';
-  if (pathname === '/fuel') return 'fuel';
-  if (pathname === '/service') return 'service';
-  if (pathname === '/settings') return 'settings';
-  return 'home';
-});
+    if (pathname === '/') return 'home';
+    if (pathname === '/vehicle') return 'vehicle';
+    if (pathname === '/fuel') return 'fuel';
+    if (pathname === '/service') return 'service';
+    if (pathname === '/settings') return 'settings';
+    return 'home';
+  });
   const colors = Colors[colorScheme];
 
   const handleTabPress = (tabName: string, route: string, index: number) => {
@@ -69,7 +69,7 @@ export function CustomTabNavigator() {
     }
   };
 
-  
+
   return (
     <View style={[styles.container]}>
       <View style={[styles.navigationContainer, { backgroundColor: colors.navigation }]}>
@@ -190,4 +190,4 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginHorizontal: Spacing.sm,
   },
-  });
+});
