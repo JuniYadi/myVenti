@@ -21,7 +21,7 @@ function RootLayoutContent() {
   useEffect(() => {
     if (loading) return;
 
-    const inAuthGroup = segments[0] === 'welcome' || segments[0] === 'login' || segments[0] === 'signup';
+    const inAuthGroup = segments[0] === 'welcome' || segments[0] === 'login' || segments[0] === 'signup' || segments[0] === 'reset-password';
 
     if (user && inAuthGroup) {
       // User is signed in but on auth screen, redirect to main app
@@ -47,6 +47,7 @@ function RootLayoutContent() {
         <Stack.Screen name="welcome" options={{ headerShown: false }} />
         <Stack.Screen name="login" options={{ headerShown: false }} />
         <Stack.Screen name="signup" options={{ headerShown: false }} />
+        <Stack.Screen name="reset-password" options={{ headerShown: false, title: 'Reset Password' }} />
         <Stack.Screen name="region-settings" options={{ title: 'Region Settings', headerShown: false }} />
         <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
       </Stack>
