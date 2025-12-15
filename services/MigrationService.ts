@@ -1,6 +1,6 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { DatabaseManager } from './DatabaseManager';
 import { Vehicle, FuelEntry, ServiceRecord } from '@/types/data';
+import SafeAsyncStorage from '@/utils/asyncStorageWrapper';
 
 interface AsyncStorageBackup {
   vehicles: Vehicle[];
@@ -56,31 +56,31 @@ export class MigrationService {
 
     try {
       // Backup vehicles
-      const vehiclesData = await AsyncStorage.getItem(storageKeys.VEHICLES);
+      const vehiclesData = await SafeAsyncStorage.getItem(storageKeys.VEHICLES);
       if (vehiclesData) {
         backup.vehicles = JSON.parse(vehiclesData);
       }
 
       // Backup fuel entries
-      const fuelEntriesData = await AsyncStorage.getItem(storageKeys.FUEL_ENTRIES);
+      const fuelEntriesData = await SafeAsyncStorage.getItem(storageKeys.FUEL_ENTRIES);
       if (fuelEntriesData) {
         backup.fuelEntries = JSON.parse(fuelEntriesData);
       }
 
       // Backup service records
-      const serviceRecordsData = await AsyncStorage.getItem(storageKeys.SERVICE_RECORDS);
+      const serviceRecordsData = await SafeAsyncStorage.getItem(storageKeys.SERVICE_RECORDS);
       if (serviceRecordsData) {
         backup.serviceRecords = JSON.parse(serviceRecordsData);
       }
 
       // Backup region
-      backup.region = await AsyncStorage.getItem(storageKeys.REGION);
+      backup.region = await SafeAsyncStorage.getItem(storageKeys.REGION);
 
       // Backup theme mode
-      backup.themeMode = await AsyncStorage.getItem(storageKeys.THEME_MODE);
+      backup.themeMode = await SafeAsyncStorage.getItem(storageKeys.THEME_MODE);
 
       // Store backup in AsyncStorage
-      await AsyncStorage.setItem(this.BACKUP_KEY, JSON.stringify(backup));
+      await SafeAsyncStorage.setItem(this.BACKUP_KEY, JSON.stringify(backup));
 
       console.log('Backup created successfully');
       return backup;
@@ -97,7 +97,7 @@ export class MigrationService {
     try {
       console.log('Restoring from backup...');
 
-      const backupData = await AsyncStorage.getItem(this.BACKUP_KEY);
+      const backupData = await SafeAsyncStorage.getItem(this.BACKUP_KEY);
       if (!backupData) {
         throw new Error('No backup found');
       }
@@ -112,16 +112,16 @@ export class MigrationService {
       };
 
       // Restore data to AsyncStorage
-      await AsyncStorage.setItem(storageKeys.VEHICLES, JSON.stringify(backup.vehicles));
-      await AsyncStorage.setItem(storageKeys.FUEL_ENTRIES, JSON.stringify(backup.fuelEntries));
-      await AsyncStorage.setItem(storageKeys.SERVICE_RECORDS, JSON.stringify(backup.serviceRecords));
+      await SafeAsyncStorage.setItem(storageKeys.VEHICLES, JSON.stringify(backup.vehicles));
+      await SafeAsyncStorage.setItem(storageKeys.FUEL_ENTRIES, JSON.stringify(backup.fuelEntries));
+      await SafeAsyncStorage.setItem(storageKeys.SERVICE_RECORDS, JSON.stringify(backup.serviceRecords));
 
       if (backup.region) {
-        await AsyncStorage.setItem(storageKeys.REGION, backup.region);
+        await SafeAsyncStorage.setItem(storageKeys.REGION, backup.region);
       }
 
       if (backup.themeMode) {
-        await AsyncStorage.setItem(storageKeys.THEME_MODE, backup.themeMode);
+        await SafeAsyncStorage.setItem(storageKeys.THEME_MODE, backup.themeMode);
       }
 
       console.log('Successfully restored from backup');
@@ -372,7 +372,7 @@ export class MigrationService {
    */
   static async clearBackup(): Promise<void> {
     try {
-      await AsyncStorage.removeItem(this.BACKUP_KEY);
+      await SafeAsyncStorage.removeItem(this.BACKUP_KEY);
       console.log('Backup cleared from AsyncStorage');
     } catch (error) {
       console.error('Failed to clear backup:', error);
@@ -387,7 +387,7 @@ export class MigrationService {
       console.log('Starting migration rollback...');
 
       // Check if backup exists
-      const backupData = await AsyncStorage.getItem(this.BACKUP_KEY);
+      const backupData = await SafeAsyncStorage.getItem(this.BACKUP_KEY);
       if (!backupData) {
         throw new Error('No backup available for rollback');
       }

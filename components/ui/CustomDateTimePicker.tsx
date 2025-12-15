@@ -1,12 +1,23 @@
-import React, { useState, forwardRef, useImperativeHandle } from 'react';
-import { Platform, TouchableOpacity, Text, Alert, View } from 'react-native';
-import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
+import React, { forwardRef, useImperativeHandle, useState } from 'react';
+import { Alert, Platform, Text, TouchableOpacity, View } from 'react-native';
+
+// Safely import DateTimePicker with fallback
+let DateTimePicker: any = null;
+let DateTimePickerEvent: any = null;
+
+try {
+  const dateTimePickerModule = require('@react-native-community/datetimepicker');
+  DateTimePicker = dateTimePickerModule.default;
+  DateTimePickerEvent = dateTimePickerModule.DateTimePickerEvent;
+} catch (error) {
+  console.warn('DateTimePicker native module not available:', error);
+}
 
 interface CustomDateTimePickerProps {
   value: Date;
   mode?: 'date' | 'time' | 'datetime';
   display?: 'default' | 'spinner' | 'compact' | 'inline';
-  onChange?: (event: DateTimePickerEvent, selectedDate?: Date) => void;
+  onChange?: (event: any, selectedDate?: Date) => void;
   minimumDate?: Date;
   maximumDate?: Date;
   disabled?: boolean;
@@ -36,7 +47,7 @@ const CustomDateTimePicker = forwardRef<CustomDateTimePickerRef, CustomDateTimeP
   ) => {
     const [show, setShow] = useState(false);
     const [date, setDate] = useState(value);
-    const [isNativeModuleAvailable, setIsNativeModuleAvailable] = useState(true);
+    const [isNativeModuleAvailable, setIsNativeModuleAvailable] = useState(!!DateTimePicker);
 
     useImperativeHandle(ref, () => ({
       show: () => setShow(true),
@@ -55,7 +66,7 @@ const CustomDateTimePicker = forwardRef<CustomDateTimePickerRef, CustomDateTimeP
       setShow(true);
     };
 
-    const handleChange = (event: DateTimePickerEvent, selectedDate?: Date) => {
+    const handleChange = (event: any, selectedDate?: Date) => {
       setShow(false);
 
       if (event.type === 'dismissed') {
@@ -112,7 +123,7 @@ const CustomDateTimePicker = forwardRef<CustomDateTimePickerRef, CustomDateTimeP
     }
 
     // For native platforms
-    if (show && isNativeModuleAvailable) {
+    if (show && isNativeModuleAvailable && DateTimePicker) {
       try {
         return (
           <DateTimePicker

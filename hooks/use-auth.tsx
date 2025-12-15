@@ -1,4 +1,13 @@
-import { createUserWithEmailAndPassword, signOut as firebaseSignOut, GoogleAuthProvider, onAuthStateChanged, sendPasswordResetEmail, signInWithCredential, signInWithEmailAndPassword, User } from 'firebase/auth';
+import {
+  createUserWithEmailAndPassword,
+  signOut as firebaseSignOut,
+  GoogleAuthProvider,
+  onAuthStateChanged,
+  sendPasswordResetEmail,
+  signInWithCredential,
+  signInWithEmailAndPassword,
+  User
+} from 'firebase/auth';
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { Platform } from 'react-native';
 import { GOOGLE_SIGN_IN_CONFIG } from '../constants/firebase';
@@ -52,12 +61,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     // Listen for auth state changes using the imported function
-    const unsubscribe = onAuthStateChanged(auth, (authUser) => {
+    const unsubscribe = onAuthStateChanged(auth, (authUser: User | null) => {
       console.log('Auth state changed:', authUser ? 'User logged in' : 'No user');
       setUser(authUser);
       setLoading(false);
       setIsInitialized(true);
-    }, (error) => {
+    }, (error: any) => {
       console.error('Auth state change error:', error);
       setLoading(false);
       setIsInitialized(true);

@@ -6,6 +6,7 @@ import React, { useEffect, useState } from 'react';
 import { Platform, View, Text, ActivityIndicator, StyleSheet } from 'react-native';
 import { MigrationService } from '@/services/MigrationService';
 import { DatabaseManager } from '@/services/DatabaseManager';
+import SafeAsyncStorage from '@/utils/asyncStorageWrapper';
 
 interface AppInitializerProps {
   children: React.ReactNode;
@@ -24,14 +25,19 @@ export function AppInitializer({ children }: AppInitializerProps) {
     try {
       setMigrationProgress('Initializing storage...');
 
-      // First, test AsyncStorage availability on native platforms
+      // First, test SafeAsyncStorage availability on native platforms
       if (Platform.OS !== 'web') {
         try {
-          const AsyncStorage = require('@react-native-async-storage/async-storage').default;
-          await AsyncStorage.getItem('__test_storage__');
-          console.log('AsyncStorage is available');
+          const isAvailable = SafeAsyncStorage.isAvailable();
+          if (isAvailable) {
+            // Test with a simple operation
+            await SafeAsyncStorage.getItem('__test_storage__');
+            console.log('SafeAsyncStorage is available');
+          } else {
+            console.log('SafeAsyncStorage not available, continuing without it');
+          }
         } catch (storageError) {
-          console.warn('AsyncStorage not available, continuing without it:', storageError);
+          console.warn('SafeAsyncStorage test failed, continuing without it:', storageError);
           // Continue with app initialization even without AsyncStorage
         }
       }

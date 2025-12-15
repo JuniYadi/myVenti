@@ -11,7 +11,9 @@
     "lint": "expo lint",
     "build:a:dev": "eas build --platform android --profile development --local",
     "build:a:preview": "eas build --platform android --profile preview --local",
-    "mcp": "npx -y @pimzino/spec-workflow-mcp@latest --dashboard"
+    "mcp": "npx -y @pimzino/spec-workflow-mcp@latest --dashboard",
+    "fix-modules": "./fix-native-modules.sh",
+    "clean": "npx expo start --clear"
   },
   "dependencies": {
     "@expo/vector-icons": "^15.0.3",
