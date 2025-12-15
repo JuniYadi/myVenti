@@ -45,3 +45,4 @@ bug
 
 # ignore
 .env
+*.apk
