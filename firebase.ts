@@ -31,51 +31,76 @@ if (validateFirebaseConfig()) {
   app = null;
 }
 
-// Initialize Firebase Authentication with platform-specific handling
+// Initialize Firebase Authentication with safe loading
 let auth: any = null;
+let authInitialized = false;
 
-if (app) {
-  // Only try AsyncStorage on native platforms
+const initializeFirebaseAuth = async () => {
+  if (!app) {
+    console.error('Firebase Auth not initialized due to missing Firebase app');
+    authInitialized = true;
+    return null;
+  }
+
+  // Try to initialize with AsyncStorage only on native platforms
   if (Platform.OS !== 'web') {
     try {
-      // Try to import AsyncStorage dynamically
-      const AsyncStorageModule = require('@react-native-async-storage/async-storage');
+      // Lazy load AsyncStorage only when needed
+      const AsyncStorageModule = await import('@react-native-async-storage/async-storage');
       const AsyncStorage = AsyncStorageModule.default || AsyncStorageModule;
 
       // Check if AsyncStorage is actually available
       if (AsyncStorage && typeof AsyncStorage.getItem === 'function') {
-        const { getReactNativePersistence } = require('firebase/auth');
+        // Lazy load getReactNativePersistence
+        const { getReactNativePersistence, initializeAuth } = await import('firebase/auth');
 
-        auth = initializeAuth(app, {
+        return initializeAuth(app, {
           persistence: getReactNativePersistence(AsyncStorage),
         });
-        console.log('Firebase Auth initialized with AsyncStorage persistence');
       } else {
         throw new Error('AsyncStorage not properly initialized');
       }
     } catch (error) {
       console.warn('AsyncStorage not available, using Firebase Auth without persistence:', error);
       // Fall back to memory-only auth
-      try {
-        auth = getAuth(app);
-      } catch (authError) {
-        console.warn('getAuth failed, trying initializeAuth without persistence:', authError);
-        auth = initializeAuth(app);
-      }
     }
   } else {
-    // Web platform - use getAuth or initializeAuth without persistence
+    // Web platform - skip AsyncStorage
     console.log('Web platform detected, using Firebase Auth without AsyncStorage');
+  }
+
+  // Fallback: Initialize without persistence
+  try {
+    const { getAuth } = await import('firebase/auth');
+    return getAuth(app);
+  } catch (authError) {
+    console.warn('getAuth failed, trying initializeAuth without persistence:', authError);
     try {
-      auth = getAuth(app);
-    } catch (authError) {
-      console.warn('getAuth failed on web, trying initializeAuth:', authError);
-      auth = initializeAuth(app);
+      const { initializeAuth } = await import('firebase/auth');
+      return initializeAuth(app);
+    } catch (initError) {
+      console.error('Failed to initialize Firebase Auth:', initError);
+      return null;
     }
   }
-} else {
-  console.error('Firebase Auth not initialized due to missing Firebase app');
-}
+};
+
+// Initialize auth asynchronously but also export a promise for cases where we need to wait
+const authPromise = initializeFirebaseAuth().then(authInstance => {
+  auth = authInstance;
+  authInitialized = true;
+  if (auth) {
+    console.log('Firebase Auth initialized successfully');
+  }
+  return auth;
+}).catch(error => {
+  console.error('Critical error initializing Firebase Auth:', error);
+  authInitialized = true;
+  return null;
+});
+
+// Export auth promise for async usage
+export { authPromise };
 
 export { auth };
 export default app;
