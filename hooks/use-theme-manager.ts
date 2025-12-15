@@ -1,6 +1,6 @@
 import React, { useState, useEffect, createContext, useContext, ReactNode } from 'react';
 import { useColorScheme as useNativeColorScheme } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { DatabaseManager } from '@/services/DatabaseManager';
 
 type ThemeMode = 'light' | 'dark' | 'system';
 
@@ -12,8 +12,6 @@ interface ThemeContextType {
 }
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
-
-const THEME_STORAGE_KEY = 'app_theme_mode';
 
 interface ThemeProviderProps {
   children: ReactNode;
@@ -31,9 +29,17 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
 
   const loadThemePreference = async () => {
     try {
-      const savedTheme = await AsyncStorage.getItem(THEME_STORAGE_KEY);
-      if (savedTheme && ['light', 'dark', 'system'].includes(savedTheme)) {
-        setThemeModeState(savedTheme as ThemeMode);
+      // Ensure database is initialized
+      await DatabaseManager.getInstance().initDatabase();
+
+      const db = DatabaseManager.getInstance();
+      const result = await db.executeSql('SELECT value FROM app_settings WHERE key = ?', ['theme_mode']);
+
+      if (result.rows && result.rows.length > 0) {
+        const savedTheme = result.rows[0].value;
+        if (savedTheme && ['light', 'dark', 'system'].includes(savedTheme)) {
+          setThemeModeState(savedTheme as ThemeMode);
+        }
       }
     } catch (error) {
       console.warn('Failed to load theme preference:', error);
@@ -45,7 +51,11 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
   const setThemeMode = async (mode: ThemeMode) => {
     try {
       setThemeModeState(mode);
-      await AsyncStorage.setItem(THEME_STORAGE_KEY, mode);
+      const db = DatabaseManager.getInstance();
+      await db.executeSql(
+        'UPDATE app_settings SET value = ?, updated_at = CURRENT_TIMESTAMP WHERE key = ?',
+        [mode, 'theme_mode']
+      );
     } catch (error) {
       console.error('Failed to save theme preference:', error);
       // Still update local state even if storage fails

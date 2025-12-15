@@ -1,6 +1,6 @@
 /**
  * Data Service for myVenti vehicle tracking application
- * Provides centralized data management using AsyncStorage for local persistence
+ * Provides centralized data management using SQLite for local persistence
  */
 
 import {
@@ -13,14 +13,7 @@ import {
     Vehicle,
     VehicleFormData,
 } from '@/types/data';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-
-// Storage keys
-const STORAGE_KEYS = {
-  VEHICLES: 'myventi_vehicles',
-  FUEL_ENTRIES: 'myventi_fuel_entries',
-  SERVICE_RECORDS: 'myventi_service_records',
-} as const;
+import { DatabaseManager } from './DatabaseManager';
 
 /**
  * Generate a unique ID for new records
@@ -50,8 +43,13 @@ const handleStorageError = (error: any, operation: string): void => {
 export class VehicleService {
   static async getAll(): Promise<Vehicle[]> {
     try {
-      const data = await AsyncStorage.getItem(STORAGE_KEYS.VEHICLES);
-      return data ? JSON.parse(data) : [];
+      const db = DatabaseManager.getInstance();
+      const result = await db.executeSql(
+        `SELECT id, name, year, make, model, type, status, created_at as createdAt, updated_at as updatedAt
+         FROM vehicles
+         ORDER BY created_at DESC`
+      );
+      return DatabaseManager.mapRowsToArray<Vehicle>(result.rows);
     } catch (error) {
       handleStorageError(error, 'VehicleService.getAll');
       return [];
@@ -60,8 +58,15 @@ export class VehicleService {
 
   static async getById(id: string): Promise<Vehicle | null> {
     try {
-      const vehicles = await this.getAll();
-      return vehicles.find(vehicle => vehicle.id === id) || null;
+      const db = DatabaseManager.getInstance();
+      const result = await db.executeSql(
+        `SELECT id, name, year, make, model, type, status, created_at as createdAt, updated_at as updatedAt
+         FROM vehicles
+         WHERE id = ?`,
+        [id]
+      );
+      const vehicles = DatabaseManager.mapRowsToArray<Vehicle>(result.rows);
+      return vehicles.length > 0 ? vehicles[0] : null;
     } catch (error) {
       handleStorageError(error, 'VehicleService.getById');
       return null;
@@ -70,22 +75,27 @@ export class VehicleService {
 
   static async create(formData: VehicleFormData): Promise<Vehicle> {
     try {
-      const vehicles = await this.getAll();
-      const newVehicle: Vehicle = {
-        id: generateId(),
-        name: formData.name.trim(),
-        year: parseInt(formData.year),
-        make: formData.make.trim(),
-        model: formData.model.trim(),
-        type: formData.type,
-        status: 'active',
-        createdAt: getCurrentTimestamp(),
-        updatedAt: getCurrentTimestamp(),
-      };
+      const db = DatabaseManager.getInstance();
+      const id = generateId();
+      const now = getCurrentTimestamp();
 
-      vehicles.push(newVehicle);
-      await AsyncStorage.setItem(STORAGE_KEYS.VEHICLES, JSON.stringify(vehicles));
-      return newVehicle;
+      await db.executeSql(
+        `INSERT INTO vehicles (id, name, year, make, model, type, status, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, 'active', ?, ?)`,
+        [
+          id,
+          formData.name.trim(),
+          parseInt(formData.year),
+          formData.make.trim(),
+          formData.model.trim(),
+          formData.type,
+          now,
+          now
+        ]
+      );
+
+      // Return the created vehicle
+      return await this.getById(id) as Vehicle;
     } catch (error) {
       handleStorageError(error, 'VehicleService.create');
       throw error;
@@ -94,25 +104,48 @@ export class VehicleService {
 
   static async update(id: string, formData: Partial<VehicleFormData>): Promise<Vehicle | null> {
     try {
-      const vehicles = await this.getAll();
-      const index = vehicles.findIndex(vehicle => vehicle.id === id);
+      const db = DatabaseManager.getInstance();
+      const now = getCurrentTimestamp();
 
-      if (index === -1) {
-        return null;
+      // Build dynamic update query
+      const updates: string[] = [];
+      const values: any[] = [];
+
+      if (formData.name) {
+        updates.push('name = ?');
+        values.push(formData.name.trim());
+      }
+      if (formData.year) {
+        updates.push('year = ?');
+        values.push(parseInt(formData.year));
+      }
+      if (formData.make) {
+        updates.push('make = ?');
+        values.push(formData.make.trim());
+      }
+      if (formData.model) {
+        updates.push('model = ?');
+        values.push(formData.model.trim());
+      }
+      if (formData.type) {
+        updates.push('type = ?');
+        values.push(formData.type);
       }
 
-      vehicles[index] = {
-        ...vehicles[index],
-        ...(formData.name && { name: formData.name.trim() }),
-        ...(formData.year && { year: parseInt(formData.year) }),
-        ...(formData.make && { make: formData.make.trim() }),
-        ...(formData.model && { model: formData.model.trim() }),
-        ...(formData.type && { type: formData.type }),
-        updatedAt: getCurrentTimestamp(),
-      };
+      if (updates.length === 0) {
+        return await this.getById(id);
+      }
 
-      await AsyncStorage.setItem(STORAGE_KEYS.VEHICLES, JSON.stringify(vehicles));
-      return vehicles[index];
+      updates.push('updated_at = ?');
+      values.push(now);
+      values.push(id);
+
+      await db.executeSql(
+        `UPDATE vehicles SET ${updates.join(', ')} WHERE id = ?`,
+        values
+      );
+
+      return await this.getById(id);
     } catch (error) {
       handleStorageError(error, 'VehicleService.update');
       throw error;
@@ -121,20 +154,11 @@ export class VehicleService {
 
   static async delete(id: string): Promise<boolean> {
     try {
-      const vehicles = await this.getAll();
-      const filteredVehicles = vehicles.filter(vehicle => vehicle.id !== id);
+      const db = DatabaseManager.getInstance();
+      const result = await db.executeSql('DELETE FROM vehicles WHERE id = ?', [id]);
 
-      if (filteredVehicles.length === vehicles.length) {
-        return false; // Vehicle not found
-      }
-
-      await AsyncStorage.setItem(STORAGE_KEYS.VEHICLES, JSON.stringify(filteredVehicles));
-
-      // Also delete related fuel entries and service records
-      await FuelService.deleteByVehicleId(id);
-      await ServiceService.deleteByVehicleId(id);
-
-      return true;
+      // SQLite will handle cascade delete for related fuel entries and service records
+      return result.rowsAffected && result.rowsAffected > 0;
     } catch (error) {
       handleStorageError(error, 'VehicleService.delete');
       throw error;
@@ -148,8 +172,14 @@ export class VehicleService {
 export class FuelService {
   static async getAll(): Promise<FuelEntry[]> {
     try {
-      const data = await AsyncStorage.getItem(STORAGE_KEYS.FUEL_ENTRIES);
-      return data ? JSON.parse(data) : [];
+      const db = DatabaseManager.getInstance();
+      const result = await db.executeSql(
+        `SELECT id, vehicle_id as vehicleId, date, amount, quantity, price_per_unit as pricePerUnit,
+                mileage, mpg, fuel_station as fuelStation, notes, created_at as createdAt, updated_at as updatedAt
+         FROM fuel_entries
+         ORDER BY date DESC, created_at DESC`
+      );
+      return DatabaseManager.mapRowsToArray<FuelEntry>(result.rows);
     } catch (error) {
       handleStorageError(error, 'FuelService.getAll');
       return [];
@@ -158,8 +188,16 @@ export class FuelService {
 
   static async getByVehicleId(vehicleId: string): Promise<FuelEntry[]> {
     try {
-      const entries = await this.getAll();
-      return entries.filter(entry => entry.vehicleId === vehicleId);
+      const db = DatabaseManager.getInstance();
+      const result = await db.executeSql(
+        `SELECT id, vehicle_id as vehicleId, date, amount, quantity, price_per_unit as pricePerUnit,
+                mileage, mpg, fuel_station as fuelStation, notes, created_at as createdAt, updated_at as updatedAt
+         FROM fuel_entries
+         WHERE vehicle_id = ?
+         ORDER BY date DESC, created_at DESC`,
+        [vehicleId]
+      );
+      return DatabaseManager.mapRowsToArray<FuelEntry>(result.rows);
     } catch (error) {
       handleStorageError(error, 'FuelService.getByVehicleId');
       return [];
@@ -168,7 +206,7 @@ export class FuelService {
 
   static async create(formData: FuelFormData): Promise<FuelEntry> {
     try {
-      const entries = await this.getAll();
+      const db = DatabaseManager.getInstance();
 
       // Calculate MPG for gas vehicles if we have previous entries for the same vehicle
       let mpg: number | undefined;
@@ -189,25 +227,29 @@ export class FuelService {
         }
       }
 
-      const newEntry: FuelEntry = {
-        id: generateId(),
-        vehicleId: formData.vehicleId,
-        date: formData.date,
-        amount: parseFloat(formData.amount),
-        quantity: parseFloat(formData.quantity),
-        pricePerUnit: parseFloat(formData.pricePerUnit),
-        mileage: parseInt(formData.mileage),
-        mpg: mpg,
-        fuelStation: formData.fuelStation?.trim(),
-        notes: formData.notes?.trim(),
-        createdAt: getCurrentTimestamp(),
-        updatedAt: getCurrentTimestamp(),
-      };
+      const id = generateId();
+      const now = getCurrentTimestamp();
 
-      entries.push(newEntry);
-      await AsyncStorage.setItem(STORAGE_KEYS.FUEL_ENTRIES, JSON.stringify(entries));
+      await db.executeSql(
+        `INSERT INTO fuel_entries (id, vehicle_id, date, amount, quantity, price_per_unit, mileage, mpg, fuel_station, notes, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          id,
+          formData.vehicleId,
+          formData.date,
+          parseFloat(formData.amount),
+          parseFloat(formData.quantity),
+          parseFloat(formData.pricePerUnit),
+          parseInt(formData.mileage),
+          mpg || null,
+          formData.fuelStation?.trim() || null,
+          formData.notes?.trim() || null,
+          now,
+          now
+        ]
+      );
 
-      return newEntry;
+      return await this.getById(id) as FuelEntry;
     } catch (error) {
       handleStorageError(error, 'FuelService.create');
       throw error;
@@ -216,15 +258,9 @@ export class FuelService {
 
   static async delete(id: string): Promise<boolean> {
     try {
-      const entries = await this.getAll();
-      const filteredEntries = entries.filter(entry => entry.id !== id);
-
-      if (filteredEntries.length === entries.length) {
-        return false; // Entry not found
-      }
-
-      await AsyncStorage.setItem(STORAGE_KEYS.FUEL_ENTRIES, JSON.stringify(filteredEntries));
-      return true;
+      const db = DatabaseManager.getInstance();
+      const result = await db.executeSql('DELETE FROM fuel_entries WHERE id = ?', [id]);
+      return result.rowsAffected && result.rowsAffected > 0;
     } catch (error) {
       handleStorageError(error, 'FuelService.delete');
       throw error;
@@ -233,9 +269,8 @@ export class FuelService {
 
   static async deleteByVehicleId(vehicleId: string): Promise<void> {
     try {
-      const entries = await this.getAll();
-      const filteredEntries = entries.filter(entry => entry.vehicleId !== vehicleId);
-      await AsyncStorage.setItem(STORAGE_KEYS.FUEL_ENTRIES, JSON.stringify(filteredEntries));
+      const db = DatabaseManager.getInstance();
+      await db.executeSql('DELETE FROM fuel_entries WHERE vehicle_id = ?', [vehicleId]);
     } catch (error) {
       handleStorageError(error, 'FuelService.deleteByVehicleId');
       throw error;
@@ -244,8 +279,16 @@ export class FuelService {
 
   static async getById(id: string): Promise<FuelEntry | null> {
     try {
-      const entries = await this.getAll();
-      return entries.find(entry => entry.id === id) || null;
+      const db = DatabaseManager.getInstance();
+      const result = await db.executeSql(
+        `SELECT id, vehicle_id as vehicleId, date, amount, quantity, price_per_unit as pricePerUnit,
+                mileage, mpg, fuel_station as fuelStation, notes, created_at as createdAt, updated_at as updatedAt
+         FROM fuel_entries
+         WHERE id = ?`,
+        [id]
+      );
+      const entries = DatabaseManager.mapRowsToArray<FuelEntry>(result.rows);
+      return entries.length > 0 ? entries[0] : null;
     } catch (error) {
       handleStorageError(error, 'FuelService.getById');
       return null;
@@ -254,21 +297,18 @@ export class FuelService {
 
   static async update(id: string, formData: FuelFormData): Promise<FuelEntry | null> {
     try {
-      const entries = await this.getAll();
-      const index = entries.findIndex(entry => entry.id === id);
-
-      if (index === -1) {
-        return null; // Entry not found
-      }
+      const db = DatabaseManager.getInstance();
 
       // Recalculate MPG for gas vehicles if mileage or quantity changed
-      let mpg: number | undefined = entries[index].mpg;
+      let mpg: number | undefined;
       const vehicle = await VehicleService.getById(formData.vehicleId);
 
       if (vehicle && vehicle.type !== 'electric') {
-        const previousEntries = entries.filter(e => e.vehicleId === formData.vehicleId && e.id !== id);
-        if (previousEntries.length > 0) {
-          const lastEntry = previousEntries[0];
+        const previousEntries = await this.getByVehicleId(formData.vehicleId);
+        const filteredEntries = previousEntries.filter(e => e.id !== id);
+
+        if (filteredEntries.length > 0) {
+          const lastEntry = filteredEntries[0];
           const currentMileage = parseInt(formData.mileage);
           const lastMileage = lastEntry.mileage;
           const gallonsUsed = parseFloat(formData.quantity);
@@ -279,22 +319,29 @@ export class FuelService {
         }
       }
 
-      entries[index] = {
-        ...entries[index],
-        vehicleId: formData.vehicleId,
-        date: formData.date,
-        amount: parseFloat(formData.amount),
-        quantity: parseFloat(formData.quantity),
-        pricePerUnit: parseFloat(formData.pricePerUnit),
-        mileage: parseInt(formData.mileage),
-        mpg: mpg,
-        fuelStation: formData.fuelStation?.trim(),
-        notes: formData.notes?.trim(),
-        updatedAt: getCurrentTimestamp(),
-      };
+      const now = getCurrentTimestamp();
 
-      await AsyncStorage.setItem(STORAGE_KEYS.FUEL_ENTRIES, JSON.stringify(entries));
-      return entries[index];
+      await db.executeSql(
+        `UPDATE fuel_entries
+         SET vehicle_id = ?, date = ?, amount = ?, quantity = ?, price_per_unit = ?,
+             mileage = ?, mpg = ?, fuel_station = ?, notes = ?, updated_at = ?
+         WHERE id = ?`,
+        [
+          formData.vehicleId,
+          formData.date,
+          parseFloat(formData.amount),
+          parseFloat(formData.quantity),
+          parseFloat(formData.pricePerUnit),
+          parseInt(formData.mileage),
+          mpg || null,
+          formData.fuelStation?.trim() || null,
+          formData.notes?.trim() || null,
+          now,
+          id
+        ]
+      );
+
+      return await this.getById(id);
     } catch (error) {
       handleStorageError(error, 'FuelService.update');
       throw error;
@@ -303,16 +350,17 @@ export class FuelService {
 
   static async getMonthlyTotal(): Promise<number> {
     try {
-      const entries = await this.getAll();
-      const currentMonth = new Date().getMonth();
-      const currentYear = new Date().getFullYear();
+      const db = DatabaseManager.getInstance();
+      const now = new Date();
+      const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
+        .toISOString().split('T')[0];
 
-      return entries
-        .filter(entry => {
-          const entryDate = new Date(entry.date);
-          return entryDate.getMonth() === currentMonth && entryDate.getFullYear() === currentYear;
-        })
-        .reduce((total, entry) => total + entry.amount, 0);
+      const result = await db.executeSql(
+        'SELECT SUM(amount) as total FROM fuel_entries WHERE date >= ?',
+        [firstDayOfMonth]
+      );
+
+      return result.rows?.[0]?.total || 0;
     } catch (error) {
       handleStorageError(error, 'FuelService.getMonthlyTotal');
       return 0;
@@ -326,11 +374,16 @@ export class FuelService {
    */
   static async getByDateRange(startDate: Date, endDate: Date): Promise<FuelEntry[]> {
     try {
-      const entries = await this.getAll();
-      return entries.filter(entry => {
-        const entryDate = new Date(entry.date);
-        return entryDate >= startDate && entryDate <= endDate;
-      });
+      const db = DatabaseManager.getInstance();
+      const result = await db.executeSql(
+        `SELECT id, vehicle_id as vehicleId, date, amount, quantity, price_per_unit as pricePerUnit,
+                mileage, mpg, fuel_station as fuelStation, notes, created_at as createdAt, updated_at as updatedAt
+         FROM fuel_entries
+         WHERE date BETWEEN ? AND ?
+         ORDER BY date DESC`,
+        [startDate.toISOString().split('T')[0], endDate.toISOString().split('T')[0]]
+      );
+      return DatabaseManager.mapRowsToArray<FuelEntry>(result.rows);
     } catch (error) {
       handleStorageError(error, 'FuelService.getByDateRange');
       return [];
@@ -349,35 +402,41 @@ export class FuelService {
     averageCostPerGallon: number;
   }> {
     try {
-      const entries = await this.getByDateRange(startDate, endDate);
+      const db = DatabaseManager.getInstance();
+      const result = await db.executeSql(
+        `SELECT
+           COUNT(*) as tripsCount,
+           COALESCE(SUM(amount), 0) as totalCost,
+           COALESCE(SUM(quantity), 0) as totalFuel,
+           COALESCE(AVG(amount), 0) as averageCostPerTrip,
+           COALESCE(SUM(amount) / NULLIF(SUM(quantity), 0), 0) as averageCostPerGallon
+         FROM fuel_entries
+         WHERE date BETWEEN ? AND ?`,
+        [startDate.toISOString().split('T')[0], endDate.toISOString().split('T')[0]]
+      );
 
-      if (entries.length === 0) {
-        return {
-          totalCost: 0,
-          totalFuel: 0,
-          averageMPG: 0,
-          tripsCount: 0,
-          averageCostPerTrip: 0,
-          averageCostPerGallon: 0,
-        };
-      }
-
-      const totalCost = entries.reduce((sum, entry) => sum + entry.amount, 0);
-      const totalFuel = entries.reduce((sum, entry) => sum + entry.quantity, 0);
+      const data = result.rows?.[0] || {};
+      const totalCost = data.totalCost || 0;
+      const totalFuel = data.totalFuel || 0;
+      const tripsCount = data.tripsCount || 0;
 
       // Calculate average MPG for gas vehicles only
-      const gasEntries = entries.filter(entry => entry.mpg && entry.mpg > 0);
-      const averageMPG = gasEntries.length > 0
-        ? gasEntries.reduce((sum, entry) => sum + entry.mpg!, 0) / gasEntries.length
-        : 0;
+      const mpgResult = await db.executeSql(
+        `SELECT AVG(mpg) as avgMPG
+         FROM fuel_entries
+         WHERE date BETWEEN ? AND ? AND mpg IS NOT NULL AND mpg > 0`,
+        [startDate.toISOString().split('T')[0], endDate.toISOString().split('T')[0]]
+      );
+
+      const averageMPG = mpgResult.rows?.[0]?.avgMPG || 0;
 
       return {
         totalCost,
         totalFuel,
         averageMPG: Math.round(averageMPG * 10) / 10,
-        tripsCount: entries.length,
-        averageCostPerTrip: totalCost / entries.length,
-        averageCostPerGallon: totalFuel > 0 ? totalCost / totalFuel : 0,
+        tripsCount,
+        averageCostPerTrip: data.averageCostPerTrip || 0,
+        averageCostPerGallon: data.averageCostPerGallon || 0,
       };
     } catch (error) {
       handleStorageError(error, 'FuelService.getAnalyticsSummary');
@@ -403,39 +462,39 @@ export class FuelService {
     averageMPG: number;
   }>> {
     try {
-      const entries = await this.getAll();
-      const monthlyData = new Map<string, FuelEntry[]>();
+      const db = DatabaseManager.getInstance();
+      const result = await db.executeSql(
+        `SELECT
+           strftime('%Y-%m', date) as month,
+           COALESCE(SUM(amount), 0) as cost,
+           COALESCE(SUM(quantity), 0) as fuel,
+           COUNT(*) as trips
+         FROM fuel_entries
+         WHERE date >= date('now', '-${months} months')
+         GROUP BY strftime('%Y-%m', date)
+         ORDER BY month ASC`,
+        []
+      );
 
-      // Group entries by month
-      entries.forEach(entry => {
-        const monthKey = entry.date.substring(0, 7); // YYYY-MM
-        if (!monthlyData.has(monthKey)) {
-          monthlyData.set(monthKey, []);
-        }
-        monthlyData.get(monthKey)!.push(entry);
-      });
-
-      // Get last N months
+      const monthlyData = DatabaseManager.mapRowsToArray<any>(result.rows);
       const trends = [];
-      const now = new Date();
 
-      for (let i = months - 1; i >= 0; i--) {
-        const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
-        const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-        const monthEntries = monthlyData.get(monthKey) || [];
+      for (const data of monthlyData) {
+        // Get average MPG for this month
+        const mpgResult = await db.executeSql(
+          `SELECT AVG(mpg) as avgMPG
+           FROM fuel_entries
+           WHERE strftime('%Y-%m', date) = ? AND mpg IS NOT NULL AND mpg > 0`,
+          [data.month]
+        );
 
-        const totalCost = monthEntries.reduce((sum, entry) => sum + entry.amount, 0);
-        const totalFuel = monthEntries.reduce((sum, entry) => sum + entry.quantity, 0);
-        const gasEntries = monthEntries.filter(entry => entry.mpg && entry.mpg > 0);
-        const averageMPG = gasEntries.length > 0
-          ? gasEntries.reduce((sum, entry) => sum + entry.mpg!, 0) / gasEntries.length
-          : 0;
+        const averageMPG = mpgResult.rows?.[0]?.avgMPG || 0;
 
         trends.push({
-          month: monthKey,
-          cost: totalCost,
-          fuel: totalFuel,
-          trips: monthEntries.length,
+          month: data.month,
+          cost: data.cost,
+          fuel: data.fuel,
+          trips: data.trips,
           averageMPG: Math.round(averageMPG * 10) / 10,
         });
       }
@@ -460,56 +519,49 @@ export class FuelService {
     averageCostPerTrip: number;
   }>> {
     try {
-      const [entries, vehicles] = await Promise.all([
-        this.getByDateRange(startDate, endDate),
-        VehicleService.getAll(),
-      ]);
+      const db = DatabaseManager.getInstance();
+      const result = await db.executeSql(
+        `SELECT
+           fe.vehicle_id as vehicleId,
+           v.name as vehicleName,
+           COALESCE(SUM(fe.amount), 0) as totalCost,
+           COALESCE(SUM(fe.quantity), 0) as totalFuel,
+           COUNT(*) as tripsCount,
+           COALESCE(SUM(fe.amount) / NULLIF(COUNT(*), 0), 0) as averageCostPerTrip
+         FROM fuel_entries fe
+         INNER JOIN vehicles v ON fe.vehicle_id = v.id
+         WHERE fe.date BETWEEN ? AND ?
+         GROUP BY fe.vehicle_id, v.name
+         ORDER BY totalCost DESC`,
+        [startDate.toISOString().split('T')[0], endDate.toISOString().split('T')[0]]
+      );
 
-      const vehicleData = new Map();
-
-      entries.forEach(entry => {
-        if (!vehicleData.has(entry.vehicleId)) {
-          vehicleData.set(entry.vehicleId, {
-            vehicleId: entry.vehicleId,
-            totalCost: 0,
-            totalFuel: 0,
-            mpgValues: [],
-            trips: 0,
-          });
-        }
-
-        const data = vehicleData.get(entry.vehicleId);
-        data.totalCost += entry.amount;
-        data.totalFuel += entry.quantity;
-        data.trips += 1;
-
-        if (entry.mpg && entry.mpg > 0) {
-          data.mpgValues.push(entry.mpg);
-        }
-      });
-
+      const comparisonData = DatabaseManager.mapRowsToArray<any>(result.rows);
       const comparison = [];
 
-      vehicleData.forEach((data, vehicleId) => {
-        const vehicle = vehicles.find(v => v.id === vehicleId);
-        if (vehicle) {
-          const averageMPG = data.mpgValues.length > 0
-            ? data.mpgValues.reduce((sum, mpg) => sum + mpg, 0) / data.mpgValues.length
-            : 0;
+      for (const data of comparisonData) {
+        // Get average MPG for this vehicle
+        const mpgResult = await db.executeSql(
+          `SELECT AVG(mpg) as avgMPG
+           FROM fuel_entries
+           WHERE vehicle_id = ? AND date BETWEEN ? AND ? AND mpg IS NOT NULL AND mpg > 0`,
+          [data.vehicleId, startDate.toISOString().split('T')[0], endDate.toISOString().split('T')[0]]
+        );
 
-          comparison.push({
-            vehicleId,
-            vehicleName: vehicle.name,
-            totalCost: data.totalCost,
-            totalFuel: data.totalFuel,
-            averageMPG: Math.round(averageMPG * 10) / 10,
-            tripsCount: data.trips,
-            averageCostPerTrip: data.totalCost / data.trips,
-          });
-        }
-      });
+        const averageMPG = mpgResult.rows?.[0]?.avgMPG || 0;
 
-      return comparison.sort((a, b) => b.totalCost - a.totalCost);
+        comparison.push({
+          vehicleId: data.vehicleId,
+          vehicleName: data.vehicleName,
+          totalCost: data.totalCost,
+          totalFuel: data.totalFuel,
+          averageMPG: Math.round(averageMPG * 10) / 10,
+          tripsCount: data.tripsCount,
+          averageCostPerTrip: data.averageCostPerTrip,
+        });
+      }
+
+      return comparison;
     } catch (error) {
       handleStorageError(error, 'FuelService.getVehicleComparison');
       return [];
@@ -533,62 +585,74 @@ export class FuelService {
     searchTerm?: string;
   }): Promise<FuelEntry[]> {
     try {
-      const entries = await this.getAll();
+      const db = DatabaseManager.getInstance();
 
-      return entries.filter(entry => {
-        // Vehicle filter
-        if (filters.vehicleId && entry.vehicleId !== filters.vehicleId) {
-          return false;
-        }
+      // Build dynamic query
+      const conditions: string[] = [];
+      const values: any[] = [];
 
-        // Date range filter
-        if (filters.startDate || filters.endDate) {
-          const entryDate = new Date(entry.date);
-          if (filters.startDate && entryDate < filters.startDate) {
-            return false;
-          }
-          if (filters.endDate && entryDate > filters.endDate) {
-            return false;
-          }
-        }
+      if (filters.vehicleId) {
+        conditions.push('vehicle_id = ?');
+        values.push(filters.vehicleId);
+      }
 
-        // Fuel station filter
-        if (filters.fuelStation) {
-          const searchTerm = filters.fuelStation.toLowerCase();
-          if (!entry.fuelStation?.toLowerCase().includes(searchTerm)) {
-            return false;
-          }
+      if (filters.startDate || filters.endDate) {
+        if (filters.startDate && filters.endDate) {
+          conditions.push('date BETWEEN ? AND ?');
+          values.push(filters.startDate.toISOString().split('T')[0]);
+          values.push(filters.endDate.toISOString().split('T')[0]);
+        } else if (filters.startDate) {
+          conditions.push('date >= ?');
+          values.push(filters.startDate.toISOString().split('T')[0]);
+        } else if (filters.endDate) {
+          conditions.push('date <= ?');
+          values.push(filters.endDate.toISOString().split('T')[0]);
         }
+      }
 
-        // Price range filter
-        if (filters.minPrice !== undefined && entry.pricePerUnit < filters.minPrice) {
-          return false;
-        }
-        if (filters.maxPrice !== undefined && entry.pricePerUnit > filters.maxPrice) {
-          return false;
-        }
+      if (filters.fuelStation) {
+        conditions.push('fuel_station LIKE ?');
+        values.push(`%${filters.fuelStation}%`);
+      }
 
-        // Amount range filter
-        if (filters.minAmount !== undefined && entry.amount < filters.minAmount) {
-          return false;
-        }
-        if (filters.maxAmount !== undefined && entry.amount > filters.maxAmount) {
-          return false;
-        }
+      if (filters.minPrice !== undefined) {
+        conditions.push('price_per_unit >= ?');
+        values.push(filters.minPrice);
+      }
 
-        // General search term (notes, fuel station)
-        if (filters.searchTerm) {
-          const searchTerm = filters.searchTerm.toLowerCase();
-          const matchesNotes = entry.notes?.toLowerCase().includes(searchTerm);
-          const matchesStation = entry.fuelStation?.toLowerCase().includes(searchTerm);
+      if (filters.maxPrice !== undefined) {
+        conditions.push('price_per_unit <= ?');
+        values.push(filters.maxPrice);
+      }
 
-          if (!matchesNotes && !matchesStation) {
-            return false;
-          }
-        }
+      if (filters.minAmount !== undefined) {
+        conditions.push('amount >= ?');
+        values.push(filters.minAmount);
+      }
 
-        return true;
-      });
+      if (filters.maxAmount !== undefined) {
+        conditions.push('amount <= ?');
+        values.push(filters.maxAmount);
+      }
+
+      if (filters.searchTerm) {
+        conditions.push('(notes LIKE ? OR fuel_station LIKE ?)');
+        const searchPattern = `%${filters.searchTerm}%`;
+        values.push(searchPattern, searchPattern);
+      }
+
+      const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+
+      const result = await db.executeSql(
+        `SELECT id, vehicle_id as vehicleId, date, amount, quantity, price_per_unit as pricePerUnit,
+                mileage, mpg, fuel_station as fuelStation, notes, created_at as createdAt, updated_at as updatedAt
+         FROM fuel_entries
+         ${whereClause}
+         ORDER BY date DESC, created_at DESC`,
+        values
+      );
+
+      return DatabaseManager.mapRowsToArray<FuelEntry>(result.rows);
     } catch (error) {
       handleStorageError(error, 'FuelService.search');
       return [];
@@ -600,16 +664,14 @@ export class FuelService {
    */
   static async getUniqueFuelStations(): Promise<string[]> {
     try {
-      const entries = await this.getAll();
-      const stations = new Set<string>();
+      const db = DatabaseManager.getInstance();
+      const result = await db.executeSql(
+        'SELECT DISTINCT fuel_station FROM fuel_entries WHERE fuel_station IS NOT NULL AND fuel_station != "" ORDER BY fuel_station',
+        []
+      );
 
-      entries.forEach(entry => {
-        if (entry.fuelStation && entry.fuelStation.trim()) {
-          stations.add(entry.fuelStation.trim());
-        }
-      });
-
-      return Array.from(stations).sort();
+      const stations = DatabaseManager.mapRowsToArray<any>(result.rows);
+      return stations.map(s => s.fuel_station);
     } catch (error) {
       handleStorageError(error, 'FuelService.getUniqueFuelStations');
       return [];
@@ -623,51 +685,16 @@ export class FuelService {
    */
   static async createBatch(formDataList: FuelFormData[]): Promise<FuelEntry[]> {
     try {
-      const entries = await this.getAll();
+      const db = DatabaseManager.getInstance();
       const newEntries: FuelEntry[] = [];
 
-      for (const formData of formDataList) {
-        // Calculate MPG for gas vehicles
-        let mpg: number | undefined;
-        const vehicle = await VehicleService.getById(formData.vehicleId);
-
-        if (vehicle && vehicle.type !== 'electric') {
-          const vehicleEntries = entries.filter(e => e.vehicleId === formData.vehicleId);
-          if (vehicleEntries.length > 0) {
-            const lastEntry = vehicleEntries.sort((a, b) =>
-              new Date(b.date).getTime() - new Date(a.date).getTime()
-            )[0];
-
-            const currentMileage = parseInt(formData.mileage);
-            const lastMileage = lastEntry.mileage;
-            const gallonsUsed = parseFloat(formData.quantity);
-
-            if (currentMileage > lastMileage && gallonsUsed > 0) {
-              mpg = (currentMileage - lastMileage) / gallonsUsed;
-            }
-          }
+      await db.transaction(async () => {
+        for (const formData of formDataList) {
+          const created = await this.create(formData);
+          newEntries.push(created);
         }
+      });
 
-        const newEntry: FuelEntry = {
-          id: generateId(),
-          vehicleId: formData.vehicleId,
-          date: formData.date,
-          amount: parseFloat(formData.amount),
-          quantity: parseFloat(formData.quantity),
-          pricePerUnit: parseFloat(formData.pricePerUnit),
-          mileage: parseInt(formData.mileage),
-          mpg: mpg,
-          fuelStation: formData.fuelStation?.trim(),
-          notes: formData.notes?.trim(),
-          createdAt: getCurrentTimestamp(),
-          updatedAt: getCurrentTimestamp(),
-        };
-
-        entries.push(newEntry);
-        newEntries.push(newEntry);
-      }
-
-      await AsyncStorage.setItem(STORAGE_KEYS.FUEL_ENTRIES, JSON.stringify(entries));
       return newEntries;
     } catch (error) {
       handleStorageError(error, 'FuelService.createBatch');
@@ -680,15 +707,19 @@ export class FuelService {
    */
   static async deleteBatch(entryIds: string[]): Promise<boolean> {
     try {
-      const entries = await this.getAll();
-      const filteredEntries = entries.filter(entry => !entryIds.includes(entry.id));
+      const db = DatabaseManager.getInstance();
 
-      if (filteredEntries.length === entries.length) {
-        return false; // No entries were deleted
+      if (entryIds.length === 0) {
+        return false;
       }
 
-      await AsyncStorage.setItem(STORAGE_KEYS.FUEL_ENTRIES, JSON.stringify(filteredEntries));
-      return true;
+      const placeholders = entryIds.map(() => '?').join(',');
+      const result = await db.executeSql(
+        `DELETE FROM fuel_entries WHERE id IN (${placeholders})`,
+        entryIds
+      );
+
+      return result.rowsAffected && result.rowsAffected > 0;
     } catch (error) {
       handleStorageError(error, 'FuelService.deleteBatch');
       throw error;
@@ -700,55 +731,18 @@ export class FuelService {
    */
   static async updateBatch(updates: Array<{ id: string; formData: FuelFormData }>): Promise<FuelEntry[]> {
     try {
-      const entries = await this.getAll();
+      const db = DatabaseManager.getInstance();
       const updatedEntries: FuelEntry[] = [];
 
-      for (const { id, formData } of updates) {
-        const index = entries.findIndex(entry => entry.id === id);
-        if (index === -1) continue;
-
-        // Recalculate MPG if needed
-        let mpg: number | undefined = entries[index].mpg;
-        const vehicle = await VehicleService.getById(formData.vehicleId);
-
-        if (vehicle && vehicle.type !== 'electric') {
-          const previousEntries = entries.filter(e =>
-            e.vehicleId === formData.vehicleId && e.id !== id
-          );
-
-          if (previousEntries.length > 0) {
-            const lastEntry = previousEntries.sort((a, b) =>
-              new Date(b.date).getTime() - new Date(a.date).getTime()
-            )[0];
-
-            const currentMileage = parseInt(formData.mileage);
-            const lastMileage = lastEntry.mileage;
-            const gallonsUsed = parseFloat(formData.quantity);
-
-            if (currentMileage > lastMileage && gallonsUsed > 0) {
-              mpg = (currentMileage - lastMileage) / gallonsUsed;
-            }
+      await db.transaction(async () => {
+        for (const { id, formData } of updates) {
+          const updated = await this.update(id, formData);
+          if (updated) {
+            updatedEntries.push(updated);
           }
         }
+      });
 
-        entries[index] = {
-          ...entries[index],
-          vehicleId: formData.vehicleId,
-          date: formData.date,
-          amount: parseFloat(formData.amount),
-          quantity: parseFloat(formData.quantity),
-          pricePerUnit: parseFloat(formData.pricePerUnit),
-          mileage: parseInt(formData.mileage),
-          mpg: mpg,
-          fuelStation: formData.fuelStation?.trim(),
-          notes: formData.notes?.trim(),
-          updatedAt: getCurrentTimestamp(),
-        };
-
-        updatedEntries.push(entries[index]);
-      }
-
-      await AsyncStorage.setItem(STORAGE_KEYS.FUEL_ENTRIES, JSON.stringify(entries));
       return updatedEntries;
     } catch (error) {
       handleStorageError(error, 'FuelService.updateBatch');
@@ -763,8 +757,14 @@ export class FuelService {
 export class ServiceService {
   static async getAll(): Promise<ServiceRecord[]> {
     try {
-      const data = await AsyncStorage.getItem(STORAGE_KEYS.SERVICE_RECORDS);
-      return data ? JSON.parse(data) : [];
+      const db = DatabaseManager.getInstance();
+      const result = await db.executeSql(
+        `SELECT id, vehicle_id as vehicleId, date, type, description, cost, mileage, notes,
+                is_completed as isCompleted, created_at as createdAt, updated_at as updatedAt
+         FROM service_records
+         ORDER BY date DESC, created_at DESC`
+      );
+      return DatabaseManager.mapRowsToArray<ServiceRecord>(result.rows);
     } catch (error) {
       handleStorageError(error, 'ServiceService.getAll');
       return [];
@@ -773,8 +773,16 @@ export class ServiceService {
 
   static async getByVehicleId(vehicleId: string): Promise<ServiceRecord[]> {
     try {
-      const records = await this.getAll();
-      return records.filter(record => record.vehicleId === vehicleId);
+      const db = DatabaseManager.getInstance();
+      const result = await db.executeSql(
+        `SELECT id, vehicle_id as vehicleId, date, type, description, cost, mileage, notes,
+                is_completed as isCompleted, created_at as createdAt, updated_at as updatedAt
+         FROM service_records
+         WHERE vehicle_id = ?
+         ORDER BY date DESC, created_at DESC`,
+        [vehicleId]
+      );
+      return DatabaseManager.mapRowsToArray<ServiceRecord>(result.rows);
     } catch (error) {
       handleStorageError(error, 'ServiceService.getByVehicleId');
       return [];
@@ -783,24 +791,28 @@ export class ServiceService {
 
   static async create(formData: ServiceFormData): Promise<ServiceRecord> {
     try {
-      const records = await this.getAll();
-      const newRecord: ServiceRecord = {
-        id: generateId(),
-        vehicleId: formData.vehicleId,
-        date: formData.date,
-        type: formData.type.trim(),
-        description: formData.description.trim(),
-        cost: parseFloat(formData.cost),
-        mileage: parseInt(formData.mileage),
-        notes: formData.notes?.trim(),
-        isCompleted: true, // Assume completed when created
-        createdAt: getCurrentTimestamp(),
-        updatedAt: getCurrentTimestamp(),
-      };
+      const db = DatabaseManager.getInstance();
+      const id = generateId();
+      const now = getCurrentTimestamp();
 
-      records.push(newRecord);
-      await AsyncStorage.setItem(STORAGE_KEYS.SERVICE_RECORDS, JSON.stringify(records));
-      return newRecord;
+      await db.executeSql(
+        `INSERT INTO service_records (id, vehicle_id, date, type, description, cost, mileage, notes, is_completed, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?)`,
+        [
+          id,
+          formData.vehicleId,
+          formData.date,
+          formData.type.trim(),
+          formData.description.trim(),
+          parseFloat(formData.cost),
+          parseInt(formData.mileage),
+          formData.notes?.trim() || null,
+          now,
+          now
+        ]
+      );
+
+      return await this.getById(id) as ServiceRecord;
     } catch (error) {
       handleStorageError(error, 'ServiceService.create');
       throw error;
@@ -809,15 +821,9 @@ export class ServiceService {
 
   static async delete(id: string): Promise<boolean> {
     try {
-      const records = await this.getAll();
-      const filteredRecords = records.filter(record => record.id !== id);
-
-      if (filteredRecords.length === records.length) {
-        return false; // Record not found
-      }
-
-      await AsyncStorage.setItem(STORAGE_KEYS.SERVICE_RECORDS, JSON.stringify(filteredRecords));
-      return true;
+      const db = DatabaseManager.getInstance();
+      const result = await db.executeSql('DELETE FROM service_records WHERE id = ?', [id]);
+      return result.rowsAffected && result.rowsAffected > 0;
     } catch (error) {
       handleStorageError(error, 'ServiceService.delete');
       throw error;
@@ -826,8 +832,16 @@ export class ServiceService {
 
   static async getById(id: string): Promise<ServiceRecord | null> {
     try {
-      const records = await this.getAll();
-      return records.find(record => record.id === id) || null;
+      const db = DatabaseManager.getInstance();
+      const result = await db.executeSql(
+        `SELECT id, vehicle_id as vehicleId, date, type, description, cost, mileage, notes,
+                is_completed as isCompleted, created_at as createdAt, updated_at as updatedAt
+         FROM service_records
+         WHERE id = ?`,
+        [id]
+      );
+      const records = DatabaseManager.mapRowsToArray<ServiceRecord>(result.rows);
+      return records.length > 0 ? records[0] : null;
     } catch (error) {
       handleStorageError(error, 'ServiceService.getById');
       return null;
@@ -836,27 +850,27 @@ export class ServiceService {
 
   static async update(id: string, formData: ServiceFormData): Promise<ServiceRecord | null> {
     try {
-      const records = await this.getAll();
-      const index = records.findIndex(record => record.id === id);
+      const db = DatabaseManager.getInstance();
+      const now = getCurrentTimestamp();
 
-      if (index === -1) {
-        return null; // Record not found
-      }
+      await db.executeSql(
+        `UPDATE service_records
+         SET vehicle_id = ?, date = ?, type = ?, description = ?, cost = ?, mileage = ?, notes = ?, updated_at = ?
+         WHERE id = ?`,
+        [
+          formData.vehicleId,
+          formData.date,
+          formData.type.trim(),
+          formData.description.trim(),
+          parseFloat(formData.cost),
+          parseInt(formData.mileage),
+          formData.notes?.trim() || null,
+          now,
+          id
+        ]
+      );
 
-      records[index] = {
-        ...records[index],
-        vehicleId: formData.vehicleId,
-        date: formData.date,
-        type: formData.type.trim(),
-        description: formData.description.trim(),
-        cost: parseFloat(formData.cost),
-        mileage: parseInt(formData.mileage),
-        notes: formData.notes?.trim(),
-        updatedAt: getCurrentTimestamp(),
-      };
-
-      await AsyncStorage.setItem(STORAGE_KEYS.SERVICE_RECORDS, JSON.stringify(records));
-      return records[index];
+      return await this.getById(id);
     } catch (error) {
       handleStorageError(error, 'ServiceService.update');
       throw error;
@@ -865,9 +879,8 @@ export class ServiceService {
 
   static async deleteByVehicleId(vehicleId: string): Promise<void> {
     try {
-      const records = await this.getAll();
-      const filteredRecords = records.filter(record => record.vehicleId !== vehicleId);
-      await AsyncStorage.setItem(STORAGE_KEYS.SERVICE_RECORDS, JSON.stringify(filteredRecords));
+      const db = DatabaseManager.getInstance();
+      await db.executeSql('DELETE FROM service_records WHERE vehicle_id = ?', [vehicleId]);
     } catch (error) {
       handleStorageError(error, 'ServiceService.deleteByVehicleId');
       throw error;
@@ -886,13 +899,13 @@ export class DataService {
   static async clearAllData(): Promise<void> {
     try {
       console.log('🗑️ Starting to clear all app data...');
+      const db = DatabaseManager.getInstance();
 
-      // Clear all data storage keys
-      await AsyncStorage.multiRemove([
-        STORAGE_KEYS.VEHICLES,
-        STORAGE_KEYS.FUEL_ENTRIES,
-        STORAGE_KEYS.SERVICE_RECORDS,
-      ]);
+      await db.transaction(async () => {
+        await db.executeSql('DELETE FROM fuel_entries');
+        await db.executeSql('DELETE FROM service_records');
+        await db.executeSql('DELETE FROM vehicles');
+      });
 
       console.log('✅ All app data cleared successfully');
     } catch (error) {
@@ -911,16 +924,17 @@ export class DataService {
     serviceRecordsCount: number;
   }> {
     try {
-      const [vehicles, fuelEntries, serviceRecords] = await Promise.all([
-        VehicleService.getAll(),
-        FuelService.getAll(),
-        ServiceService.getAll(),
+      const db = DatabaseManager.getInstance();
+      const [vehicleResult, fuelResult, serviceResult] = await Promise.all([
+        db.executeSql('SELECT COUNT(*) as count FROM vehicles'),
+        db.executeSql('SELECT COUNT(*) as count FROM fuel_entries'),
+        db.executeSql('SELECT COUNT(*) as count FROM service_records')
       ]);
 
       return {
-        vehiclesCount: vehicles.length,
-        fuelEntriesCount: fuelEntries.length,
-        serviceRecordsCount: serviceRecords.length,
+        vehiclesCount: vehicleResult.rows?.[0]?.count || 0,
+        fuelEntriesCount: fuelResult.rows?.[0]?.count || 0,
+        serviceRecordsCount: serviceResult.rows?.[0]?.count || 0,
       };
     } catch (error) {
       console.error('❌ Error getting data stats:', error);
@@ -939,18 +953,25 @@ export class DataService {
 export class DashboardService {
   static async getSummary(): Promise<DashboardSummary> {
     try {
-      const vehicles = await VehicleService.getAll();
-      const monthlyFuelCost = await FuelService.getMonthlyTotal();
+      const db = DatabaseManager.getInstance();
+      const [vehicleResult, monthlyFuelResult] = await Promise.all([
+        db.executeSql(
+          'SELECT COUNT(*) as total, SUM(CASE WHEN status = "active" THEN 1 ELSE 0 END) as active FROM vehicles'
+        ),
+        db.executeSql(
+          'SELECT COALESCE(SUM(amount), 0) as total FROM fuel_entries WHERE date >= date("now", "start of month")'
+        )
+      ]);
+
+      const vehicleData = vehicleResult.rows?.[0] || {};
+      const monthlyFuelCost = monthlyFuelResult.rows?.[0]?.total || 0;
 
       return {
-        totalVehicles: vehicles.length,
-        activeVehicles: vehicles.filter(v => v.status === 'active').length,
+        totalVehicles: vehicleData.total || 0,
+        activeVehicles: vehicleData.active || 0,
         monthlyFuelCost: Math.round(monthlyFuelCost * 100) / 100, // Round to 2 decimal places
         upcomingServices: 0, // TODO: Implement service due calculation
-        totalMileage: vehicles.reduce((total, vehicle) => {
-          // Get the latest fuel entry for each vehicle to determine mileage
-          return total; // Simplified for now
-        }, 0),
+        totalMileage: 0, // TODO: Calculate total mileage from latest entries
       };
     } catch (error) {
       handleStorageError(error, 'DashboardService.getSummary');
@@ -966,32 +987,46 @@ export class DashboardService {
 
   static async getRecentActivity(limit: number = 10): Promise<RecentActivity[]> {
     try {
-      const fuelEntries = await FuelService.getAll();
-      const serviceRecords = await ServiceService.getAll();
+      const db = DatabaseManager.getInstance();
+      const [fuelResult, serviceResult] = await Promise.all([
+        db.executeSql(
+          `SELECT id, amount, created_at
+           FROM fuel_entries
+           ORDER BY created_at DESC
+           LIMIT 5`,
+          []
+        ),
+        db.executeSql(
+          `SELECT id, type, cost, created_at
+           FROM service_records
+           ORDER BY created_at DESC
+           LIMIT 5`,
+          []
+        )
+      ]);
 
-      const activities: RecentActivity[] = [
-        ...fuelEntries.slice(0, 5).map(entry => ({
-          id: entry.id,
-          type: 'fuel' as const,
-          title: 'Fuel Fill-up',
-          subtitle: `Rp ${entry.amount.toLocaleString('id-ID')}`,
-          time: this.formatRelativeTime(entry.createdAt),
-          icon: 'fuelpump.fill',
-          color: '#007AFF', // Using blue as primary color
-        })),
-        ...serviceRecords.slice(0, 5).map(record => ({
-          id: record.id,
-          type: 'service' as const,
-          title: record.type,
-          subtitle: `Rp ${record.cost.toLocaleString('id-ID')}`,
-          time: this.formatRelativeTime(record.createdAt),
-          icon: 'wrench.fill',
-          color: '#34C759', // Using green as success color
-        })),
-      ];
+      const fuelActivities = DatabaseManager.mapRowsToArray<any>(fuelResult.rows).map(entry => ({
+        id: entry.id,
+        type: 'fuel' as const,
+        title: 'Fuel Fill-up',
+        subtitle: `Rp ${entry.amount.toLocaleString('id-ID')}`,
+        time: this.formatRelativeTime(entry.created_at),
+        icon: 'fuelpump.fill',
+        color: '#007AFF',
+      }));
+
+      const serviceActivities = DatabaseManager.mapRowsToArray<any>(serviceResult.rows).map(record => ({
+        id: record.id,
+        type: 'service' as const,
+        title: record.type,
+        subtitle: `Rp ${record.cost.toLocaleString('id-ID')}`,
+        time: this.formatRelativeTime(record.created_at),
+        icon: 'wrench.fill',
+        color: '#34C759',
+      }));
 
       // Sort by creation time (most recent first) and limit
-      return activities
+      return [...fuelActivities, ...serviceActivities]
         .sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime())
         .slice(0, limit);
     } catch (error) {

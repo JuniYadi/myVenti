@@ -4,10 +4,8 @@
  */
 
 import { useState, useEffect, createContext, useContext, ReactNode } from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { DatabaseManager } from '@/services/DatabaseManager';
 import { RegionCode, RegionConfig, DEFAULT_REGION, REGION_CONFIGS } from '@/types/region';
-
-const REGION_STORAGE_KEY = 'myVenti_region';
 
 interface RegionContextType {
   currentRegion: RegionCode;
@@ -32,17 +30,32 @@ export function RegionProvider({ children }: RegionProviderProps) {
 
   const loadRegionPreference = async () => {
     try {
-      const savedRegion = await AsyncStorage.getItem(REGION_STORAGE_KEY);
-      if (savedRegion && savedRegion in REGION_CONFIGS) {
-        setCurrentRegion(savedRegion as RegionCode);
+      // Ensure database is initialized
+      await DatabaseManager.getInstance().initDatabase();
+
+      const db = DatabaseManager.getInstance();
+      const result = await db.executeSql('SELECT value FROM app_settings WHERE key = ?', ['region']);
+
+      if (result.rows && result.rows.length > 0) {
+        const savedRegion = result.rows[0].value;
+        if (savedRegion && savedRegion in REGION_CONFIGS) {
+          setCurrentRegion(savedRegion as RegionCode);
+        } else {
+          // Update with default region if invalid
+          await db.executeSql(
+            'UPDATE app_settings SET value = ?, updated_at = CURRENT_TIMESTAMP WHERE key = ?',
+            [DEFAULT_REGION, 'region']
+          );
+          setCurrentRegion(DEFAULT_REGION);
+        }
       } else {
-        // Set default region to storage if none exists
-        await AsyncStorage.setItem(REGION_STORAGE_KEY, DEFAULT_REGION);
+        // Default region should already be inserted during DB initialization
+        setCurrentRegion(DEFAULT_REGION);
       }
     } catch (error) {
       console.error('Error loading region preference:', error);
       // Fallback to default region
-      await AsyncStorage.setItem(REGION_STORAGE_KEY, DEFAULT_REGION);
+      setCurrentRegion(DEFAULT_REGION);
     } finally {
       setIsLoading(false);
     }
@@ -50,7 +63,11 @@ export function RegionProvider({ children }: RegionProviderProps) {
 
   const setRegion = async (region: RegionCode) => {
     try {
-      await AsyncStorage.setItem(REGION_STORAGE_KEY, region);
+      const db = DatabaseManager.getInstance();
+      await db.executeSql(
+        'UPDATE app_settings SET value = ?, updated_at = CURRENT_TIMESTAMP WHERE key = ?',
+        [region, 'region']
+      );
       setCurrentRegion(region);
     } catch (error) {
       console.error('Error saving region preference:', error);

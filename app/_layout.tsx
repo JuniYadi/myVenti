@@ -9,6 +9,7 @@ import 'react-native-reanimated';
 import { AuthProvider, useAuth } from '../hooks/use-auth';
 import { RegionProvider } from '../hooks/use-region';
 import { ThemeProvider, useColorScheme } from '../hooks/use-theme-manager';
+import { AppInitializer } from '../components/AppInitializer';
 
 function RootLayoutContent() {
   const colorScheme = useColorScheme();
@@ -55,14 +56,16 @@ function RootLayoutContent() {
 export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <ThemeProvider>
-        <RegionProvider>
-          <AuthProvider>
-            <RootLayoutContent />
-          </AuthProvider>
-        </RegionProvider>
-      </ThemeProvider>
-      <StatusBar style="auto" />
+      <AppInitializer>
+        <ThemeProvider>
+          <RegionProvider>
+            <AuthProvider>
+              <RootLayoutContent />
+            </AuthProvider>
+          </RegionProvider>
+        </ThemeProvider>
+        <StatusBar style="auto" />
+      </AppInitializer>
     </GestureHandlerRootView>
   );
 }
