@@ -11,7 +11,13 @@ let auth: any;
 
 try {
   // Try to import AsyncStorage dynamically
-  const AsyncStorage = require('@react-native-async-storage/async-storage').default;
+  let AsyncStorage;
+  try {
+    AsyncStorage = require('@react-native-async-storage/async-storage').default;
+  } catch (importError) {
+    throw new Error('AsyncStorage module not available');
+  }
+
   const { getReactNativePersistence } = require('firebase/auth');
 
   // If AsyncStorage is available, use it for persistence

@@ -23,6 +23,7 @@ interface RegionProviderProps {
 export function RegionProvider({ children }: RegionProviderProps) {
   const [currentRegion, setCurrentRegion] = useState<RegionCode>(DEFAULT_REGION);
   const [isLoading, setIsLoading] = useState(true);
+  const [hasError, setHasError] = useState(false);
 
   useEffect(() => {
     loadRegionPreference();
@@ -54,6 +55,7 @@ export function RegionProvider({ children }: RegionProviderProps) {
       }
     } catch (error) {
       console.error('Error loading region preference:', error);
+      setHasError(true);
       // Fallback to default region
       setCurrentRegion(DEFAULT_REGION);
     } finally {
@@ -71,7 +73,10 @@ export function RegionProvider({ children }: RegionProviderProps) {
       setCurrentRegion(region);
     } catch (error) {
       console.error('Error saving region preference:', error);
-      throw error;
+      // Don't throw error, just log it
+      console.warn('Failed to save region preference, but continuing with region change');
+      // Still update the local state even if database fails
+      setCurrentRegion(region);
     }
   };
 
@@ -82,6 +87,8 @@ export function RegionProvider({ children }: RegionProviderProps) {
     isLoading,
   };
 
+  // Always render the provider, even if there's an error
+  // The context will have default values if database fails
   return <RegionContext.Provider value={value}>{children}</RegionContext.Provider>;
 }
 
