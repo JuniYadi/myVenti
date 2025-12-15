@@ -8,6 +8,7 @@ import { ThemedView } from '@/components/themed-view';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useRegion } from '@/hooks/use-region';
 import type { FuelSearchFilter, Vehicle } from '@/types/data';
 import React, { useCallback, useMemo, useState } from 'react';
 import {
