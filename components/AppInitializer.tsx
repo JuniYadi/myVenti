@@ -3,7 +3,7 @@
  */
 
 import React, { useEffect, useState } from 'react';
-import { View, Text, ActivityIndicator, StyleSheet } from 'react-native';
+import { Platform, View, Text, ActivityIndicator, StyleSheet } from 'react-native';
 import { MigrationService } from '@/services/MigrationService';
 import { DatabaseManager } from '@/services/DatabaseManager';
 
@@ -22,6 +22,20 @@ export function AppInitializer({ children }: AppInitializerProps) {
 
   const initializeApp = async () => {
     try {
+      setMigrationProgress('Initializing storage...');
+
+      // First, test AsyncStorage availability on native platforms
+      if (Platform.OS !== 'web') {
+        try {
+          const AsyncStorage = require('@react-native-async-storage/async-storage').default;
+          await AsyncStorage.getItem('__test_storage__');
+          console.log('AsyncStorage is available');
+        } catch (storageError) {
+          console.warn('AsyncStorage not available, continuing without it:', storageError);
+          // Continue with app initialization even without AsyncStorage
+        }
+      }
+
       setMigrationProgress('Initializing database...');
 
       // Initialize database first
@@ -29,28 +43,40 @@ export function AppInitializer({ children }: AppInitializerProps) {
 
       setMigrationProgress('Checking migration status...');
 
-      // Check if migration is needed
-      const isMigrated = await MigrationService.isMigrated();
+      // Check if migration is needed - wrap in try-catch
+      let isMigrated = false;
+      try {
+        isMigrated = await MigrationService.isMigrated();
+      } catch (migrationCheckError) {
+        console.warn('Migration check failed, assuming fresh install:', migrationCheckError);
+        isMigrated = false;
+      }
 
       if (!isMigrated) {
         setMigrationProgress('Migrating data to new storage system...');
 
-        // Perform migration
-        await MigrationService.migrateFromAsyncStorage();
+        try {
+          // Perform migration
+          await MigrationService.migrateFromAsyncStorage();
 
-        setMigrationProgress('Migration completed successfully!');
+          setMigrationProgress('Migration completed successfully!');
 
-        // Wait a moment to show success message
-        await new Promise(resolve => setTimeout(resolve, 1000));
+          // Wait a moment to show success message
+          await new Promise(resolve => setTimeout(resolve, 1000));
 
-        // Clear backup after successful migration
-        await MigrationService.clearBackup();
+          // Clear backup after successful migration
+          await MigrationService.clearBackup();
+        } catch (migrationError) {
+          console.error('Migration failed, continuing with fresh install:', migrationError);
+          setMigrationProgress('Setting up fresh installation...');
+          // Continue with app even if migration fails
+        }
       }
 
       setIsInitializing(false);
     } catch (error) {
       console.error('App initialization failed:', error);
-      setError('Failed to initialize app. Please restart the app.');
+      setError(`Failed to initialize app: ${error instanceof Error ? error.message : 'Unknown error'}. Please restart the app.`);
       setIsInitializing(false);
     }
   };

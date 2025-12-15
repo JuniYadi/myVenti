@@ -11,7 +11,7 @@ import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { FuelService, VehicleService } from '@/services/index';
 import { FuelEntry, Vehicle } from '@/types/data';
-import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
+import CustomDateTimePicker, { CustomDateTimePickerRef } from '@/components/ui/CustomDateTimePicker';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
@@ -63,8 +63,8 @@ export default function FuelAnalyticsScreen() {
   const [fuelEntries, setFuelEntries] = useState<FuelEntry[]>([]);
   const [analyticsData, setAnalyticsData] = useState<AnalyticsData | null>(null);
 
-  const [showStartDatePicker, setShowStartDatePicker] = useState(false);
-  const [showEndDatePicker, setShowEndDatePicker] = useState(false);
+  const startDateRef = React.useRef<CustomDateTimePickerRef>(null);
+  const endDateRef = React.useRef<CustomDateTimePickerRef>(null);
   const [startDate, setStartDate] = useState<Date>(
     startDateParam ? new Date(startDateParam) : new Date(new Date().getFullYear(), new Date().getMonth(), 1)
   );
@@ -226,18 +226,16 @@ export default function FuelAnalyticsScreen() {
     }));
   };
 
-  const handleStartDateChange = (event: DateTimePickerEvent, selectedDate?: Date) => {
-    setShowStartDatePicker(false);
-    if (selectedDate) {
+  const handleStartDateChange = (event: any, selectedDate?: Date) => {
+    if (selectedDate && event.type === 'set') {
       setStartDate(selectedDate);
       const dateStr = selectedDate.toISOString().split('T')[0];
       router.replace(`/fuel/analytics?startDate=${dateStr}&endDate=${endDate.toISOString().split('T')[0]}`);
     }
   };
 
-  const handleEndDateChange = (event: DateTimePickerEvent, selectedDate?: Date) => {
-    setShowEndDatePicker(false);
-    if (selectedDate) {
+  const handleEndDateChange = (event: any, selectedDate?: Date) => {
+    if (selectedDate && event.type === 'set') {
       setEndDate(selectedDate);
       const dateStr = selectedDate.toISOString().split('T')[0];
       router.replace(`/fuel/analytics?startDate=${startDate.toISOString().split('T')[0]}&endDate=${dateStr}`);
@@ -439,7 +437,7 @@ export default function FuelAnalyticsScreen() {
       <View style={styles.dateRangeButtons}>
         <TouchableOpacity
           style={[styles.dateButton, { backgroundColor: colors.surface, borderColor: colors.border }]}
-          onPress={() => setShowStartDatePicker(true)}
+          onPress={() => startDateRef.current?.show()}
         >
           <IconSymbol name="calendar" size={16} color={colors.icon} />
           <ThemedText style={[styles.dateButtonText, { color: colors.text }]}>
@@ -455,7 +453,7 @@ export default function FuelAnalyticsScreen() {
 
         <TouchableOpacity
           style={[styles.dateButton, { backgroundColor: colors.surface, borderColor: colors.border }]}
-          onPress={() => setShowEndDatePicker(true)}
+          onPress={() => endDateRef.current?.show()}
         >
           <IconSymbol name="calendar" size={16} color={colors.icon} />
           <ThemedText style={[styles.dateButtonText, { color: colors.text }]}>
@@ -547,22 +545,20 @@ export default function FuelAnalyticsScreen() {
       </ScrollView>
 
       {/* Date Pickers */}
-      {showStartDatePicker && (
-        <DateTimePicker
-          value={startDate}
-          mode="date"
-          display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-          onChange={handleStartDateChange}
-        />
-      )}
-      {showEndDatePicker && (
-        <DateTimePicker
-          value={endDate}
-          mode="date"
-          display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-          onChange={handleEndDateChange}
-        />
-      )}
+      <CustomDateTimePicker
+        ref={startDateRef}
+        value={startDate}
+        mode="date"
+        onChange={handleStartDateChange}
+        style={{ position: 'absolute', opacity: 0, height: 0 }}
+      />
+      <CustomDateTimePicker
+        ref={endDateRef}
+        value={endDate}
+        mode="date"
+        onChange={handleEndDateChange}
+        style={{ position: 'absolute', opacity: 0, height: 0 }}
+      />
     </ThemedView>
   );
 }

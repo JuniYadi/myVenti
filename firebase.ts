@@ -45,21 +45,18 @@ const initializeFirebaseAuth = async () => {
   // Try to initialize with AsyncStorage only on native platforms
   if (Platform.OS !== 'web') {
     try {
-      // Lazy load AsyncStorage only when needed
-      const AsyncStorageModule = await import('@react-native-async-storage/async-storage');
-      const AsyncStorage = AsyncStorageModule.default || AsyncStorageModule;
+      // Use require instead of import for better async loading
+      const AsyncStorage = require('@react-native-async-storage/async-storage').default;
 
-      // Check if AsyncStorage is actually available
-      if (AsyncStorage && typeof AsyncStorage.getItem === 'function') {
-        // Lazy load getReactNativePersistence
-        const { getReactNativePersistence, initializeAuth } = await import('firebase/auth');
+      // Test AsyncStorage by trying to get an item
+      await AsyncStorage.getItem('test_asyncstorage_availability');
 
-        return initializeAuth(app, {
-          persistence: getReactNativePersistence(AsyncStorage),
-        });
-      } else {
-        throw new Error('AsyncStorage not properly initialized');
-      }
+      // If AsyncStorage works, use it for persistence
+      const { getReactNativePersistence, initializeAuth } = require('firebase/auth');
+
+      return initializeAuth(app, {
+        persistence: getReactNativePersistence(AsyncStorage),
+      });
     } catch (error) {
       console.warn('AsyncStorage not available, using Firebase Auth without persistence:', error);
       // Fall back to memory-only auth
@@ -71,12 +68,12 @@ const initializeFirebaseAuth = async () => {
 
   // Fallback: Initialize without persistence
   try {
-    const { getAuth } = await import('firebase/auth');
+    const { getAuth } = require('firebase/auth');
     return getAuth(app);
   } catch (authError) {
     console.warn('getAuth failed, trying initializeAuth without persistence:', authError);
     try {
-      const { initializeAuth } = await import('firebase/auth');
+      const { initializeAuth } = require('firebase/auth');
       return initializeAuth(app);
     } catch (initError) {
       console.error('Failed to initialize Firebase Auth:', initError);
