@@ -5,6 +5,7 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, ActivityIndicator, StyleSheet } from 'react-native';
 import { MigrationService } from '@/services/MigrationService';
+import { DatabaseManager } from '@/services/DatabaseManager';
 
 interface AppInitializerProps {
   children: React.ReactNode;
@@ -21,6 +22,11 @@ export function AppInitializer({ children }: AppInitializerProps) {
 
   const initializeApp = async () => {
     try {
+      setMigrationProgress('Initializing database...');
+
+      // Initialize database first
+      await DatabaseManager.getInstance().initDatabase();
+
       setMigrationProgress('Checking migration status...');
 
       // Check if migration is needed
