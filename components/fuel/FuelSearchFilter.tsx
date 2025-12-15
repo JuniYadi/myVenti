@@ -19,19 +19,28 @@ import {
     View,
 } from 'react-native';
 
-// Dynamically import DateTimePicker only on native platforms
+// DateTimePicker will be loaded on demand when needed
 let DateTimePicker: any = null;
 let DateTimePickerEvent: any = null;
+let DateTimePickerLoaded = false;
 
-if (Platform.OS !== 'web') {
+const loadDateTimePicker = async () => {
+  if (DateTimePickerLoaded || Platform.OS === 'web') {
+    return DateTimePicker;
+  }
+
   try {
-    const pickerModule = require('@react-native-community/datetimepicker');
+    const pickerModule = await import('@react-native-community/datetimepicker');
     DateTimePicker = pickerModule.default || pickerModule;
     DateTimePickerEvent = pickerModule.DateTimePickerEvent;
+    DateTimePickerLoaded = true;
+    return DateTimePicker;
   } catch (error) {
     console.warn('DateTimePicker not available on this platform:', error);
+    DateTimePickerLoaded = true; // Mark as loaded to avoid repeated attempts
+    return null;
   }
-}
+};
 
 interface FuelSearchFilterProps {
   filter: FuelSearchFilter;
@@ -264,11 +273,16 @@ export function FuelSearchFilter({ filter, onFilterChange, vehicles }: FuelSearc
           <View style={styles.dateContainer}>
             <TouchableOpacity
               style={[styles.dateButton, { backgroundColor: colors.surface, borderColor: colors.border }]}
-              onPress={() => {
-                if (DateTimePicker) {
-                  setShowStartDatePicker(true);
-                } else {
+              onPress={async () => {
+                if (Platform.OS === 'web') {
                   handleWebDateInput('start');
+                } else {
+                  const Picker = await loadDateTimePicker();
+                  if (Picker) {
+                    setShowStartDatePicker(true);
+                  } else {
+                    handleWebDateInput('start');
+                  }
                 }
               }}
             >
@@ -279,11 +293,16 @@ export function FuelSearchFilter({ filter, onFilterChange, vehicles }: FuelSearc
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.dateButton, { backgroundColor: colors.surface, borderColor: colors.border }]}
-              onPress={() => {
-                if (DateTimePicker) {
-                  setShowEndDatePicker(true);
-                } else {
+              onPress={async () => {
+                if (Platform.OS === 'web') {
                   handleWebDateInput('end');
+                } else {
+                  const Picker = await loadDateTimePicker();
+                  if (Picker) {
+                    setShowEndDatePicker(true);
+                  } else {
+                    handleWebDateInput('end');
+                  }
                 }
               }}
             >
@@ -381,8 +400,8 @@ export function FuelSearchFilter({ filter, onFilterChange, vehicles }: FuelSearc
         )}
       </ScrollView>
 
-      {/* Date Pickers - Only render on native platforms */}
-      {DateTimePicker && showStartDatePicker && (
+      {/* Date Pickers - Use async loaded component */}
+      {Platform.OS !== 'web' && showStartDatePicker && DateTimePickerLoaded && DateTimePicker && (
         <DateTimePicker
           value={startDate || new Date()}
           mode="date"
@@ -390,7 +409,7 @@ export function FuelSearchFilter({ filter, onFilterChange, vehicles }: FuelSearc
           onChange={handleStartDateChange}
         />
       )}
-      {DateTimePicker && showEndDatePicker && (
+      {Platform.OS !== 'web' && showEndDatePicker && DateTimePickerLoaded && DateTimePicker && (
         <DateTimePicker
           value={endDate || new Date()}
           mode="date"
